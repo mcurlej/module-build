@@ -1,0 +1,6 @@
+*.pyc
+.vscode
+.pytest_cache
+htmlcov/
+module_build.egg*/
+.coverage
