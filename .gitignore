@@ -4,3 +4,4 @@
 htmlcov/
 module_build.egg*/
 .coverage
+__pycache__
