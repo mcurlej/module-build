@@ -1,5 +1,7 @@
 import argparse
 
+
+from module_build.builders.mock_builder import MockBuilder
 from module_build.metadata import (load_modulemd_file_from_path, load_modulemd_file_from_scm,
                                    generate_module_stream_version)
 from module_build.stream import ModuleStream
@@ -13,7 +15,7 @@ def get_arg_parser():
     )
     parser = argparse.ArgumentParser("module-build", description=description,
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("WORKDIR", type=str,
+    parser.add_argument("workdir", type=str,
                         help=("The working directory where the build of a module stream will"
                               " happen."))
 
@@ -25,10 +27,11 @@ def get_arg_parser():
                        help=("URL to the git branch where the modulemd yaml file resides."))
 
     parser.add_argument("-c", "--mock-cfg", help="Path to the mock config.",
-                        default=".", required=True, type=str)
+                        default=".", type=str, required=True)
     parser.add_argument("-a", "--arch", required=True, type=str,
                         help="Architecture for which the module is build.")
 
+    # TODO add options for module-name and module-stream
     return parser
 
 
@@ -51,12 +54,17 @@ def main():
     if not mmd:
         raise Exception("no input")
 
-# PHASE2: create working dirs and necessary files
+# PHASE2: init the builder and attempt to build the module stream
 
-# PHASE3: init the builder and attempt to build the module stream
+    mock_builder = MockBuilder(args.mock_cfg, args.workdir)
+
+# PHASE3: try to build the module
+# TODO make this inside a try/except. When the build fail inspect the mock_builder status and 
+# update the `state` of metadata
+    mock_builder.build(module_stream)
 
 # PHASE4: Make a final report on the module stream build
-
+    mock_builder.build_status()
 
 if __name__ == "__main__":
     main()

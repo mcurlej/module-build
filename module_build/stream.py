@@ -32,7 +32,13 @@ class ModuleStream:
 
         contexts = []
         for s in streams:
-            msc = ModuleStreamContext(s, self.version)
+            # we need to get the platform from the buildconfig which is defined in the packager
+            # metadata document.
+            context_name = s.get_context()
+            bc = mmd.get_build_config(context_name)
+            platform = bc.get_platform()
+
+            msc = ModuleStreamContext(s, self.version, platform)
             contexts.append(msc)
         return contexts
 
@@ -66,17 +72,20 @@ class ModuleStream:
 
 class ModuleStreamContext:
 
-    def __init__(self, mmd, version):
+    def __init__(self, mmd, version, platform):
         self.mmd = mmd
         mmd.set_version(version)
         mmd.set_static_context()
         self.static_context = mmd.is_static_context()
+        self.module_name = mmd.get_module_name()
         self.version = version
-        self.name = mmd.get_context()
+        self.platform = platform
+        self.stream = mmd.get_stream_name()
+        self.context_name = mmd.get_context()
         self.build_opts = mmd.get_buildopts()
-        self.rpm_macros = self.build_opts.get_rpm_macros()
+        self.rpm_macros = self.build_opts.get_rpm_macros().split("\n")
         self.rpm_whitelist = self.build_opts.get_rpm_whitelist()
-        self.dependencies = mmd.get_dependencies()
+        self.dependencies = self._get_dependencies(mmd)
         self.demodularized_rpms = mmd.get_demodularized_rpms()
 
     def get_NSVCA(self):
@@ -90,3 +99,37 @@ class ModuleStreamContext:
         """
         self.mmd.set_arch(arch)
         self.arch = arch
+
+    def _get_dependencies(self, mmd):
+        dependencies = mmd.get_dependencies()[0]
+        processed_deps = {
+            "buildtime": [],
+            "runtime": [],
+        }
+
+        buidtime_dep_names = dependencies.get_buildtime_modules()
+        for name in buidtime_dep_names:
+            # NOTE: platform is not a real build or runtime dependency.
+            if name != "platform":
+                stream = dependencies.get_buildtime_streams(name)
+                processed_deps["buildtime"].append("{name}:{stream}".format(name=name,
+                                                                            stream=stream))
+        runtime_dep_names = dependencies.get_runtime_modules()
+
+        for name in runtime_dep_names:
+            # NOTE: platform is not a real build or runtime dependency.
+            if name != "platform":
+                stream = dependencies.get_runtime_streams(name)
+                processed_deps["runtime"].append("{name}:{stream}".format(name=name, stream=stream))
+
+        return processed_deps
+
+    def get_modularity_label(self):
+        return "{name}:{stream}:{version}:{context}".format(name=self.module_name,
+                                                            stream=self.stream, 
+                                                            version=self.version, 
+                                                            context=self.context_name)
+
+    def get_rpm_suffix(self):
+        return ".module_{platform}+{context}".format(platform=self.platform,
+                                                     context=self.context_name)

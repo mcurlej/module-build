@@ -1,0 +1,952 @@
+document: modulemd-packager
+version: 3
+data:
+    name: perl-bootstrap
+    stream: devel
+    summary: Perl bootstrap module for bootrapping Perl module
+    description: >
+        This is the Perl interpreter and a set of modules written in Perl
+        language intended for bootstrapping the perl module. This module
+        disables some optional tests to limit amount of components. This
+        module is not intended for public use. It's an intermediate step for
+        building perl module.
+    license:
+        - MIT 
+    xmd:
+        mbs_options:
+            # Prevent from contaminating build root with bare Perl packages
+            blocked_packages:
+                - perl
+                - perl-accessors
+                - perl-Algorithm-Diff
+                - perl-Archive-Tar
+                - perl-Archive-Zip
+                - perl-Authen-SASL
+                - perl-autodie
+                - perl-B-Debug
+                - perl-bignum
+                - perl-BSD-Resource
+                - perl-Capture-Tiny
+                - perl-Carp
+                - perl-CGI
+                - perl-Class-XSAccessor
+                - perl-Compress-Bzip2
+                - perl-Compress-Raw-Bzip2
+                - perl-Compress-Raw-Zlib
+                - perl-Config-Perl-V
+                - perl-constant
+                - perl-CPAN
+                - perl-CPAN-Meta
+                - perl-CPAN-Meta-Check
+                - perl-CPAN-Meta-Requirements
+                - perl-CPAN-Meta-YAML
+                - perl-Data-Dumper
+                - perl-Data-OptList
+                - perl-Data-Section
+                - perl-DB_File
+                - perl-Devel-Leak
+                - perl-Devel-PPPort
+                - perl-Devel-Size
+                - perl-Devel-StackTrace
+                - perl-Devel-Symdump
+                - perl-Digest
+                - perl-Digest-HMAC
+                - perl-Digest-MD5
+                - perl-Digest-SHA
+                - perl-Digest-SHA1
+                - perl-Encode
+                - perl-Encode-Locale
+                - perl-Env
+                - perl-Expect
+                - perl-experimental
+                - perl-Exporter
+                - perl-ExtUtils-CBuilder
+                - perl-ExtUtils-Install
+                - perl-ExtUtils-MakeMaker
+                - perl-ExtUtils-Manifest
+                - perl-ExtUtils-ParseXS
+                - perl-Fedora-VSP
+                - perl-File-Fetch
+                - perl-File-Find-Object
+                - perl-File-Find-Object-Rule
+                - perl-File-Find-Rule
+                - perl-File-Find-Rule-Perl
+                - perl-File-HomeDir
+                - perl-File-Path
+                - perl-File-Slurp-Tiny
+                - perl-File-Temp
+                - perl-File-Which
+                - perl-Filter
+                - perl-Filter-Simple
+                - perl-generators
+                - perl-Getopt-Long
+                - perl-GSSAPI
+                - perl-HTML-Parser
+                - perl-HTML-Tagset
+                - perl-HTTP-Date
+                - perl-HTTP-Message
+                - perl-HTTP-Tiny
+                - perl-Import-Into
+                - perl-inc-latest
+                - perl-IO-Compress
+                - perl-IO-HTML
+                - perl-IO-Socket-INET6
+                - perl-IO-Socket-IP
+                - perl-IO-Socket-SSL
+                - perl-IO-String
+                - perl-IO-Tty
+                - perl-IPC-Cmd
+                - perl-IPC-Run
+                - perl-IPC-System-Simple
+                - perl-IPC-SysV
+                - perl-JSON
+                - perl-JSON-PP
+                - perl-libnet
+                - perl-local-lib
+                - perl-Locale-Codes
+                - perl-Locale-Maketext
+                - perl-LWP-MediaTypes
+                - perl-Math-BigInt
+                - perl-Math-BigInt-FastCalc
+                - perl-Math-BigRat
+                - perl-MIME-Base64
+                - perl-Mixin-Linewise
+                - perl-Module-Build
+                - perl-Module-CoreList
+                - perl-Module-Load
+                - perl-Module-Load-Conditional
+                - perl-Module-Metadata
+                - perl-Module-Runtime
+                - perl-MRO-Compat
+                - perl-Net-IDN-Encode
+                - perl-Net-LibIDN
+                - perl-Net-SSLeay
+                - perl-Number-Compare
+                - perl-Package-Generator
+                - perl-Params-Check
+                - perl-Params-Util
+                - perl-parent
+                - perl-PathTools
+                - perl-Perl-OSType
+                - perl-Perl-Version
+                - perl-perlfaq
+                - perl-PerlIO-utf8_strict
+                - perl-PerlIO-via-QuotedPrint
+                - perl-Pod-Checker
+                - perl-Pod-Coverage
+                - perl-Pod-Coverage-TrustPod
+                - perl-Pod-Escapes
+                - perl-Pod-Eventual
+                - perl-Pod-Parser
+                - perl-Pod-Perldoc
+                - perl-Pod-Simple
+                - perl-Pod-Usage
+                - perl-podlators
+                - perl-Scalar-List-Utils
+                - perl-Socket
+                - perl-Socket6
+                - perl-Software-License
+                - perl-Sort-Versions
+                - perl-Storable
+                - perl-Sub-Exporter
+                - perl-Sub-Identify
+                - perl-Sub-Install
+                - perl-Sub-Uplevel
+                - perl-SUPER
+                - perl-Sys-Syslog
+                - perl-Term-ANSIColor
+                - perl-Term-Cap
+                - perl-TermReadKey
+                - perl-Test-CPAN-Meta
+                - perl-Test-Deep
+                - perl-Test-Exception
+                - perl-Test-FailWarnings
+                - perl-Test-Harness
+                - perl-Test-MockModule
+                - perl-Test-NoWarnings
+                - perl-Test-Output
+                - perl-Test-Pod
+                - perl-Test-Pod-Coverage
+                - perl-Test-Portability-Files
+                - perl-Test-Simple
+                - perl-Test-Taint
+                - perl-Test-TrailingSpace
+                - perl-Test-Version
+                - perl-Test-Warn
+                - perl-Text-Balanced
+                - perl-Text-Diff
+                - perl-Text-Glob
+                - perl-Text-Levenshtein-Damerau-XS
+                - perl-Text-ParseWords
+                - perl-Text-Tabs+Wrap
+                - perl-Text-Template
+                - perl-Thread-Queue
+                - perl-threads
+                - perl-threads-shared
+                - perl-Tie-IxHash
+                - perl-Time-HiRes
+                - perl-Time-Local
+                - perl-TimeDate
+                - perl-Try-Tiny
+                - perl-Unicode-Collate
+                - perl-Unicode-Normalize
+                - perl-URI
+                - perl-version
+                - perl-YAML
+                - perl-YAML-Syck
+    configurations:
+        - platform: f26
+          context: f26devel
+          buildopts:
+                rpms:
+                    macros: |
+                        %perl_bootstrap 1
+                        %_with_perl_enables_groff 1
+                        %_without_perl_enables_syslog_test 1
+                        %_with_perl_enables_systemtap 1
+                        %_without_perl_enables_tcsh 1
+                        %_without_perl_Compress_Bzip2_enables_optional_test 1
+                        %_without_perl_CPAN_Meta_Requirements_enables_optional_test 1
+                        %_without_perl_IPC_System_Simple_enables_optional_test 1
+                        %_without_perl_LWP_MediaTypes_enables_mailcap 1
+                        %_without_perl_Module_Build_enables_optional_test 1
+                        %_without_perl_Perl_OSType_enables_optional_test 1
+                        %_without_perl_Pod_Perldoc_enables_tk_test 1
+                        %_without_perl_Software_License_enables_optional_test 1
+                        %_without_perl_Sys_Syslog_enables_optional_test 1
+                        %_without_perl_Test_Harness_enables_optional_test 1
+                        %_without_perl_URI_enables_Business_ISBN 1
+        - platform: f27
+          context: f27devel
+          buildopts:
+                rpms:
+                    macros: |
+                        %perl_bootstrap 1
+                        %_with_perl_enables_groff 1
+                        %_without_perl_enables_syslog_test 1
+                        %_with_perl_enables_systemtap 1
+                        %_without_perl_enables_tcsh 1
+                        %_without_perl_Compress_Bzip2_enables_optional_test 1
+                        %_without_perl_CPAN_Meta_Requirements_enables_optional_test 1
+                        %_without_perl_IPC_System_Simple_enables_optional_test 1
+                        %_without_perl_LWP_MediaTypes_enables_mailcap 1
+                        %_without_perl_Module_Build_enables_optional_test 1
+                        %_without_perl_Perl_OSType_enables_optional_test 1
+                        %_without_perl_Pod_Perldoc_enables_tk_test 1
+                        %_without_perl_Software_License_enables_optional_test 1
+                        %_without_perl_Sys_Syslog_enables_optional_test 1
+                        %_without_perl_Test_Harness_enables_optional_test 1
+                        %_without_perl_URI_enables_Business_ISBN 1
+    references:
+        community: https://fedoraproject.org/wiki/Modularity
+        documentation: https://fedoraproject.org/wiki/Fedora_Packaging_Guidelines_for_Modules
+    components:
+        rpms:
+            perl:
+                rationale: The Perl interpreter.
+                ref: f26
+            perl-Fedora-VSP:
+                rationale: RPM dependency generator.
+                ref: f26
+                buildorder: 2
+            perl-generators:
+                rationale: RPM dependency generator.
+                ref: f26
+            perl-Algorithm-Diff:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Archive-Tar:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-autodie:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-B-Debug:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Capture-Tiny:
+                rationale: build dependency.
+                ref: f26
+            perl-Carp:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Class-XSAccessor:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Compress-Bzip2:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Compress-Raw-Bzip2:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Compress-Raw-Zlib:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-constant:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-CPAN-Meta:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-CPAN-Meta-Requirements:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-CPAN-Meta-YAML:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Data-Dumper:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-DB_File:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Devel-Leak:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Devel-PPPort:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Devel-StackTrace:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Devel-Symdump:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Digest:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Digest-MD5:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Digest-SHA:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Digest-SHA1:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Encode:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Encode-Locale:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Env:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-experimental:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Exporter:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-ExtUtils-CBuilder:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-ExtUtils-Install:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-ExtUtils-MakeMaker:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-ExtUtils-Manifest:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-ExtUtils-ParseXS:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-File-Path:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-File-Slurp-Tiny:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-File-Temp:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-File-Which:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Filter:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Filter-Simple:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Getopt-Long:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-GSSAPI:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-HTML-Tagset:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-HTTP-Date:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-HTTP-Tiny:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-inc-latest:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-IO-HTML:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-IO-Socket-IP:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-IO-String:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-IO-Tty:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-IPC-System-Simple:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-IPC-SysV:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-JSON-PP:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-libnet:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Locale-Codes:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Locale-Maketext:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-LWP-MediaTypes:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Math-BigInt:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-MIME-Base64:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Module-CoreList:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Module-Load:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Module-Load-Conditional:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Module-Metadata:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-MRO-Compat:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Net-LibIDN:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Number-Compare:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Params-Check:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Params-Util:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-parent:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-PathTools:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Perl-OSType:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-perlfaq:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-PerlIO-via-QuotedPrint:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Pod-Checker:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Pod-Escapes:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Pod-Parser:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Pod-Perldoc:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Pod-Simple:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Pod-Usage:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-podlators:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Scalar-List-Utils:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Socket:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Socket6:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Sort-Versions:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Storable:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Sub-Install:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Sub-Uplevel:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Sys-Syslog:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Term-Cap:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-TermReadKey:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Test-Deep:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Test-Harness:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Test-Pod:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Test-Portability-Files:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Test-Simple:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Text-Balanced:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Text-Glob:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Text-Levenshtein-Damerau-XS:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Text-ParseWords:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Text-Tabs+Wrap:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Text-Template:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Thread-Queue:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-threads:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-threads-shared:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Tie-IxHash:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Time-HiRes:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Time-Local:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-TimeDate:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Unicode-Collate:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-Unicode-Normalize:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-URI:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-version:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-YAML:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 4
+            perl-bignum:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-Data-OptList:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-Digest-HMAC:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-Expect:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-File-Fetch:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-File-Find-Object:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-File-Find-Rule:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-File-HomeDir:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-HTML-Parser:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-HTTP-Message:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-IO-Compress:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-IPC-Run:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-Math-BigInt-FastCalc:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-Math-BigRat:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-Module-Build:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-Package-Generator:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-Pod-Coverage:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-Sub-Identify:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-Term-ANSIColor:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-Test-Exception:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-Test-FailWarnings:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-Test-NoWarnings:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-Test-Warn:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-Text-Diff:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 5
+            perl-accessors:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 6
+            perl-Authen-SASL:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 6
+            perl-CGI:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 6
+            perl-Config-Perl-V:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 6
+            perl-CPAN:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 6
+            perl-File-Find-Object-Rule:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 6
+            perl-File-Find-Rule-Perl:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 6
+            perl-IPC-Cmd:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 6
+            perl-local-lib:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 6
+            perl-Net-SSLeay:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 6
+            perl-PerlIO-utf8_strict:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 6
+            perl-Sub-Exporter:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 6
+            perl-SUPER:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 6
+            perl-Test-Pod-Coverage:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 6
+            perl-BSD-Resource:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 7
+            perl-Data-Section:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 7
+            perl-Devel-Size:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 7
+            perl-JSON:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 7
+            perl-Mixin-Linewise:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 7
+            perl-Module-Runtime:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 7
+            perl-Net-IDN-Encode:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 7
+            perl-Perl-Version:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 7
+            perl-Test-CPAN-Meta:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 7
+            perl-Test-MockModule:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 7
+            perl-Test-Output:
+                rationale: build dependency.
+                ref: f26
+            perl-Test-Taint:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 7
+            perl-Test-TrailingSpace:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 7
+            perl-Test-Version:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 7
+            perl-Archive-Zip:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 8
+            perl-Import-Into:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 8
+            perl-IO-Socket-INET6:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 8
+            perl-Pod-Eventual:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 8
+            perl-YAML-Syck:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 8
+            perl-IO-Socket-SSL:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 9
+            perl-Pod-Coverage-TrustPod:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 9
+            perl-CPAN-Meta-Check:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 10
+            perl-Try-Tiny:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 11
+            perl-Software-License:
+                rationale: build dependency.
+                ref: f26
+                buildorder: 12
