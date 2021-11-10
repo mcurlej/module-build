@@ -342,3 +342,19 @@ def test_build_perl_bootstrap(tmpdir):
         expected_modular_deps = c["modular_deps"]["buildtime"]
         expected_modular_deps.append(expected_platform[n])
         assert_modular_dependencies(modular_deps, expected_modular_deps)
+
+
+def test_resume_module_build_failed_first_component():
+    pass
+
+
+def test_resume_module_build_failed_not_first_component():
+    pass
+
+
+def test_resume_module_build_failed_to_create_batch_yaml_file():
+    pass
+
+
+def test_resume_module_build_failed_to_create_final_yaml_file():
+    pass

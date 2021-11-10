@@ -1,7 +1,10 @@
 import copy
+import logging
 import os
 import shutil
 import subprocess
+import sys
+from collections import OrderedDict
 
 from module_build.metadata import (generate_and_populate_output_mmd, mmd_to_str,
                                    generate_module_stream_version)
@@ -9,48 +12,118 @@ from module_build.metadata import (generate_and_populate_output_mmd, mmd_to_str,
 class MockBuilder:
     # TODO enable building only specific contexts
     # TODO enable multiprocess queues for component building.
-    def __init__(self, mock_cfg_path, workdir):
+    def __init__(self, mock_cfg_path, workdir, arch):
         self.states = ["init", "building", "failed", "finished"]
         self.workdir = workdir
         self.mock_cfg_path = mock_cfg_path
+        self.arch = arch
 
-    def build(self, module_stream):
+    def build(self, module_stream, resume):
         # first we must process the metadata provided by the module stream
         # components need to be organized to `build_batches`
+        logging.info("Processing buildorder of the module stream.")
         self.create_build_contexts(module_stream)
+
+        if resume:
+            msg = "------------- Resuming Module Build --------------"
+            logging.info(msg)
+            self.find_and_set_resume_point()
 
         # when the metadata processing is done, we can ge to the building of the defined `contexts`
         for context_name, build_context in self.build_contexts.items():
+            
+            if build_context["status"]["state"] == self.states[3] and resume:
+                msg = "The build context '{context}' state is set to '{state}'. Skipping...".format(
+                    context=context_name,
+                    state=self.states[3],
+                )
+                logging.info(msg)
+                continue
+
+            msg = "Building context '{context}' of module stream '{module}:{stream}'...".format(
+                context=context_name,
+                module=module_stream.name,
+                stream=module_stream.stream)
+            logging.info(msg)
             # we create a dir for the contexts where we will store everything related to a `context`
-            build_context["dir"] = self.create_build_context_dir(context_name)
+            if "dir" not in build_context:
+                build_context["dir"] = self.create_build_context_dir(context_name)
 
             build_context["status"]["state"] = self.states[1]
             batch_repo_path = os.path.abspath(build_context["dir"] + "/build_batches")
             batch_repo = "file://{repo}".format(repo=batch_repo_path)
 
+            sorted_batches = sorted(build_context["build_batches"])
+            last_batch = sorted_batches[-1]
             # the keys in `build_context["build_batches"]` represent the `buildorder` of the context
             # we use `sorted` to get the `buildorder` into an ascending order
-            for position in sorted(build_context["build_batches"]):
-
+            for position in sorted_batches:
                 batch = build_context["build_batches"][position]
-                batch["dir"] = self.create_build_batch_dir(context_name, position)
+
+                if batch["batch_state"] == self.states[3] and resume:
+                    msg = ("The batch number '{num}' from context '{context}' state is set "
+                           "to '{state}'. Skipping...").format(
+                        context=context_name,
+                        state=self.states[3],
+                        num=position,
+                    )
+                    logging.info(msg)
+                    continue
+
+                msg = "Building batch number {num}...".format(num=position)
+                logging.info(msg)
+
+                if "dir" not in batch:
+                    batch["dir"] = self.create_build_batch_dir(context_name, position)
 
                 build_context["status"]["current_build_batch"] = position
                 build_context["build_batches"][position]["batch_state"] = self.states[1]
 
-                # create/update the repository in `build_batches` dir so we can use it as modular 
-                # batch dependency repository for buildtime dependencies. Each finished batch will 
-                # be used for the next one as modular dependency.
+                # create/update the repository in `build_batches` dir so we can use it as 
+                # modular batch dependency repository for buildtime dependencies. Each finished 
+                # batch will be used for the next one as modular dependency. 
+                msg = "Updating build batch modular repository..."
+                logging.info(msg)
                 self.call_createrepo_c_on_dir(batch_repo_path)
 
                 for index, component in enumerate(batch["components"]):
 
+                    if batch["curr_comp"] > index and resume:
+                        msg = ("The component '{name}' of batch number '{num}' of "
+                               "context '{context}' is already built. Skipping...").format(
+                                   name=component["name"],
+                                   num=position,
+                                   context=context_name,
+                               )
+                        logging.info(msg)
+                        continue
+
+                    msg = "Building component {index} out of {all}...".format(
+                        index=index+1,
+                        all=len(batch["components"]))
+                    logging.info(msg)
+
+                    msg = ("Building component '{name}' out of batch '{batch}' from context"
+                           " '{context}'...").format(name=component["name"],
+                                                     batch=position,
+                                                     context=context_name)
+                    logging.info(msg)
+
                     build_context["build_batches"][position]["curr_comp"] = index
                     build_context["build_batches"][position]["curr_comp_state"] = self.states[1]
 
+                    msg = "Generating mock config for component '{name}'...".format(
+                        name=component["name"]
+                    )
+                    logging.info(msg)
                     # we prepare a mock config for the mock buildroot.
                     mock_cfg_str = self.generate_and_process_mock_cfg(component, context_name,
                                                                       position)
+
+                    msg = "Initializing mock buildroot for component '{name}'...".format(
+                        name=component["name"]
+                    )
+                    logging.info(msg)
 
                     buildroot = MockBuildroot(component, mock_cfg_str, batch["dir"], position,
                                               build_context["modularity_label"],
@@ -65,9 +138,9 @@ class MockBuilder:
                     build_context["status"]["num_finished_comps"] += 1
 
                 # when the batch has finished building all its components, we will turn the batch 
-                # dir into a module stream. `close_batch` will add a modules.yaml file so the dir 
+                # dir into a module stream. `finalize_batch` will add a modules.yaml file so the dir 
                 # and its build rpms can be used in the next batch as modular dependencies
-                self.close_batch(position, context_name)
+                self.finalize_batch(position, context_name)
 
                 build_context["build_batches"][position]["batch_state"] = self.states[3]
 
@@ -75,7 +148,7 @@ class MockBuilder:
             self.finalize_build_context(context_name)
 
 
-    def build_status(self):
+    def final_report(self):
         pass
 
     def generate_build_batches(self, components):
@@ -86,7 +159,6 @@ class MockBuilder:
         :return build_batches: dict of build batches.
         :rtype build_batches: dict
         """
-        # TODO maybe rewrite it as a class method?
         build_batches = {}
 
         for component in components:
@@ -103,7 +175,7 @@ class MockBuilder:
                 }
 
             build_batches[position]["components"].append(component)
-
+        
         # after we have the build batches populated we need to generate list of module streams,
         # which will be used in the batches as modular dependencies. Each batch will serve as a 
         # module stream dependency for the next batch.
@@ -123,6 +195,31 @@ class MockBuilder:
                         b=b
                     ))
 
+        msg = "The following build batches where identified according to the buildorder:"
+        logging.info(msg)
+
+        msg_batch = ""
+        for order in sorted_build_batches:
+            comp_names = []
+
+            for comp in build_batches[order]["components"]:
+                comp_names.append(comp["name"])
+
+            msg_batch += """
+            batch number (buildorder): {order}
+            components count: {count}
+            modular batch dependencies: 
+            {deps}
+            components: 
+            {comp_names}
+            ---------------------""".format(order=order, count=len(comp_names),
+                                            comp_names=comp_names,
+                                            deps=build_batches[order]["modular_batch_deps"])
+        logging.info(msg_batch)
+
+        msg = "Total build batches count: {num}".format(num=len(sorted_build_batches))
+        logging.info(msg)
+
         return build_batches
 
     def create_build_contexts(self, module_stream):
@@ -132,11 +229,12 @@ class MockBuilder:
         :param module_stream: a module stream object
         :type module_stream: :class:`module_build.stream.ModuleBuild` object
         """
-        build_contexts = {}
+        build_contexts = OrderedDict()
 
         for context in module_stream.contexts:
-            # TODO need to set arch in a more automatic way.
-            context.set_arch("x86_64")
+            msg = "Processing '{context}' context...".format(context=context.context_name)
+            logging.info(msg)
+            context.set_arch(self.arch)
             build_context = {
                 "name": context.context_name,
                 "nsvca": context.get_NSVCA(),
@@ -152,6 +250,7 @@ class MockBuilder:
                     "num_finished_comps": 0,
                 }
             }
+            logging.info("Generating build batches from the components buildorder...")
             build_context["build_batches"] = self.generate_build_batches(module_stream.components)
             build_contexts[context.context_name] = build_context
 
@@ -167,6 +266,10 @@ class MockBuilder:
                                         self.build_contexts[context_name]["nsvca"])
         os.makedirs(context_dir_path)
 
+        msg = "Created dir for '{context}' context: {path}".format(context=context_name,
+                                                                   path=context_dir_path)
+        logging.info(msg)
+
         return context_dir_path
 
     def create_build_batch_dir(self, context_name, batch_num):
@@ -181,10 +284,14 @@ class MockBuilder:
                                         "batch_{batch_num}".format(batch_num=batch_num))
         os.makedirs(batches_dir_path)
 
-        return batches_dir_path
+        msg = "Created dir for batch number {num} from '{context}' context: {path}".format(
+            num=batch_num,
+            context=context_name,
+            path=batches_dir_path,
+        )
+        logging.info(msg)
 
-    def create_and_populate_repo_dir(self):
-        pass
+        return batches_dir_path
 
     def generate_and_process_mock_cfg(self, component, context_name, batch_num):
         # TODO consider to remove from this class and make a standalone function
@@ -227,15 +334,28 @@ class MockBuilder:
 
         return mock_cfg_str
 
-    def close_batch(self, position, context_name):
+    def finalize_batch(self, position, context_name):
+        msg = "Batch number {num} finished building all its components.".format(num=position)
+        logging.info(msg)
+
+        build_batch = self.build_contexts[context_name]["build_batches"][position]
+
+        msg = "Artifact count: {count}".format(count=len(build_batch["finished_builds"]))
+        logging.info(msg)
+
+        msg = "\nList of artifacts:\n"
+        for fb in build_batch["finished_builds"]:
+            msg += "- {file_path}\n".format(file_path=fb)
+        logging.info(msg)
+
         num_batches = len(self.build_contexts[context_name]["build_batches"])
         last_batch = sorted(self.build_contexts[context_name]["build_batches"])[-1]
+        batch_dir = self.build_contexts[context_name]["build_batches"][position]["dir"]
         # we need to create a module stream out of a build_batch. This will happen only when there 
         # is more batches then 1. If there is only 1 batch (no set buildorder) nothing needs to 
         # be done. If the batch is the last in the buildorder it will be not used as a modular
         # dependency for any other batch so we also do nothing.
         if num_batches > 1 and last_batch != position:
-            #
             name = "batch{num}".format(num=position)
             stream = "{num}".format(num=position)
             context = "b{num}".format(num=position)
@@ -252,7 +372,6 @@ class MockBuilder:
             # for each new batch mmd we want a copy of the modular dependencies which are
             # provided from the initial mmd file
             modular_deps = copy.deepcopy(self.build_contexts[context_name]["modular_deps"])
-            build_batch = self.build_contexts[context_name]["build_batches"][position]
             modular_batch_deps = build_batch["modular_batch_deps"]
 
             for d in modular_batch_deps:
@@ -269,7 +388,6 @@ class MockBuilder:
             
             mmd_str = mmd_to_str(mmd)
 
-            batch_dir = self.build_contexts[context_name]["build_batches"][position]["dir"]
             mmd_file_name = "/{n}:{s}:{v}:{c}:{a}.modulemd.yaml".format(
                 n=name,
                 s=stream,
@@ -277,12 +395,31 @@ class MockBuilder:
                 c=context,
                 a=self.build_contexts[context_name]["metadata"].arch,
             )
+            file_path = batch_dir + mmd_file_name
 
-            with open(batch_dir + mmd_file_name, "w") as f:
+            with open(file_path, "w") as f:
                 f.write(mmd_str)
+            
+            msg = ("Batch number {position} is defined as modular batch dependency for batches "
+                   "{num}-{last_batch}").format(position=position, num=position + 1,
+                                                last_batch=last_batch)
+            logging.info(msg)
+            msg = "Modular metadata written to: {path}".format(path=file_path)
+
+        # we create a dummy file which marks the whole batch as finished. This serves as a marker
+        # for the --resume feature to mark the whole build as finished
+        finished_file_path = batch_dir + "/finished" 
+        with open(finished_file_path, "w") as f:
+            f.write("finished")
 
     def call_createrepo_c_on_dir(self, dir):
         # TODO move out as a standalone function
+        
+        msg = "createrepo_c called on dir: {path}".format(
+            path=dir,
+        )
+        logging.info(msg)
+
         mock_cmd = ["createrepo_c", dir]
         proc = subprocess.Popen(mock_cmd)
         out, err = proc.communicate()
@@ -295,40 +432,64 @@ class MockBuilder:
         return out, err
 
     def finalize_build_context(self, context_name):
-        # TODO copy all built rpms from all batch dirs to a single directory, create the final mmd file 
-        # and call createrepo_c on it.
+        msg = "Context '{name}' finished building all its batches...".format(
+            name=context_name)
+        logging.info(msg)
         context_dir = self.build_contexts[context_name]["dir"]
         final_repo_dir = context_dir + "/final_repo"
         os.makedirs(final_repo_dir)
 
         mmd = self.build_contexts[context_name]["metadata"].mmd
 
-        for b in self.build_contexts[context_name]["build_batches"].values():
-            for f in b["finished_builds"]:
-                shutil.copy(f, final_repo_dir)
-                # we get the filename from the file path and remove the .rpm extension
-                mmd.add_rpm_artifact(f.split("/")[-1][:-4])
+        name = mmd.get_module_name()
+        stream = mmd.get_stream_name()
+        version = mmd.get_version()
+        context = mmd.get_context()
+        arch = self.build_contexts[context_name]["metadata"].arch
+
+        msg = ("Copying build artifacts from batches directories to the final repo"
+               " dir: {path}").format(path=final_repo_dir)
+        logging.info(msg)
+
+        for bb in self.build_contexts[context_name]["build_batches"].values():
+            for file_path in bb["finished_builds"]:
+                shutil.copy(file_path, final_repo_dir)
+            artifacts = self.get_artifacts_nevra(bb["finished_builds"])
+
+            for a in artifacts:
+                mmd.add_rpm_artifact(a)
 
         mmd_str = mmd_to_str(mmd)
 
         mmd_file_name = "/{n}:{s}:{v}:{c}:{a}.modulemd.yaml".format(
-            n=mmd.get_module_name(),
-            s=mmd.get_stream_name(),
-            v=mmd.get_version(),
-            c=mmd.get_context(),
-            a=self.build_contexts[context_name]["metadata"].arch,
+            n=name,
+            s=stream,
+            v=version,
+            c=context_name,
+            a=arch,
         )
 
         mmd_yaml_file_path = final_repo_dir + "/" + mmd_file_name
         with open(mmd_yaml_file_path, "w") as f:
             f.write(mmd_str)
 
+        msg = ("Modulemd yaml file for the '{name}:{stream}:{version}:{context}' module stream has "
+               "been written to: {path}").format(name=name, stream=stream, version=version,
+                                                 context=context, path=mmd_yaml_file_path)
+
         self.build_contexts[context_name]["final_repo_path"] = final_repo_dir 
         self.build_contexts[context_name]["final_yaml_path"] = mmd_yaml_file_path
         self.call_createrepo_c_on_dir(final_repo_dir)
 
+        # we create a dummy file which marks the whole repo as finished. This serves as a marker
+        # for the --resume feature to mark the whole build as finished
+        finished_file_path = context_dir + "/finished" 
+        with open(finished_file_path, "w") as f:
+            f.write("finished")
+
     def get_artifacts_nevra(self, artifacts):
-        rpm_cmd = ["rpm", "--queryformat", "%{NAME} %{EPOCHNUM} %{VERSION} %{RELEASE} %{ARCH}\n",
+        rpm_cmd = ["rpm", "--queryformat",
+                   "%{NAME} %{EPOCHNUM} %{VERSION} %{RELEASE} %{ARCH} %{SOURCERPM}\n",
                    "-qp"]
 
         # TODO the whole method is dirty needs to be rewritten.
@@ -348,10 +509,307 @@ class MockBuilder:
 
             nevras = out.strip().split("\n")
             for nevra in nevras:
-                name, epoch, version, release, arch = nevra.split()
+                name, epoch, version, release, arch, src = nevra.split()
+                if "none" in src:
+                    arch = "src"
                 artifacts_nevra.append("{}-{}:{}-{}.{}".format(name, epoch, version, release, arch))
-        import pdb; pdb.set_trace()
+
         return artifacts_nevra
+
+    def find_and_set_resume_point(self):
+        # TODO this is too big i need to rewrite it and put it into smaller chunks, rewrite this 
+        # using os.walk()
+        resume_point = {}
+        # we find out which context we need to resume.
+        expected_dir_names = []
+        for context in self.build_contexts.values():
+            expected_dir_names.append(context["nsvca"])
+
+        # check if the work directory contains any context directories
+        context_dirs = [d for d in os.listdir(self.workdir) if d in expected_dir_names]
+
+        if not context_dirs:
+            raise Exception(("No expected context directories in the working directory: {dir}\n"
+                             "Are you sure you are in the correct working directory?\n").format(
+                dir=self.workdir))
+
+        msg = "Found possible context directories: {dirs}".format(dirs=context_dirs)
+        logging.info(msg)
+
+        for context_name, context in self.build_contexts.items(): 
+            build_batches = context["build_batches"]
+
+            # if the context dir for the next context does not exist. The resume point is the next
+            # context in line, the first batch and the first component of this batch.
+            if context["nsvca"] not in context_dirs:
+                resume_point["context"] = context_name
+                resume_point["batch"] = 0
+                resume_point["component"] = build_batches[0]["components"][0]["name"]
+                break
+
+            cd_path = self.workdir + "/" + context["nsvca"]
+            # we look for the finished filename in the context dir
+            finished = [f for f in os.listdir(cd_path) if f == "finished"]
+            context = self.build_contexts[context_name]
+            build_batches_dir = cd_path + "/build_batches"
+            batch_dirs = [d for d in os.listdir(build_batches_dir) if d.startswith("batch")]
+
+            if finished:
+                # if the whole context is finished, then we populate the builder metadata with
+                # the current state of the context in the working directory.
+                msg = ("Context '{context}' is finished. Extracting and processing "
+                       "metadata...").format(context=context_name)
+                logging.info(msg)
+
+                context["status"]["state"] = self.states[3]
+
+                for position in sorted(build_batches):
+                    actual_batch_name = "batch_{position}".format(position=position)
+
+                    if actual_batch_name in batch_dirs:
+                        batch_dir = build_batches_dir + "/" + actual_batch_name
+                        finished = [f for f in os.listdir(batch_dir) if f == "finished"]
+                        msg = "Processing batch number '{num}' of context '{context}'...".format(
+                            num=position, context=context_name)
+                        logging.info(msg)
+
+                        for comp in build_batches[position]["components"]:
+                            comp_dir = batch_dir + "/" + comp["name"]
+
+                            if not os.path.isdir(comp_dir):
+                                msg = ("Component dir of component '{name}' from batch number"
+                                       " '{num}' of context '{context}' does not exist!").format(
+                                           name=comp["name"],
+                                           num=position,
+                                           context=context_name,
+                                )
+                                raise Exception(msg)
+
+                            # add finished RPMs to the builder metadata
+                            rpm_files = [f for f in os.listdir(comp_dir) if f.endswith("rpm")]
+                            for rpm in rpm_files:
+                                file_path = comp_dir + "/" + rpm
+                                build_batches[position]["finished_builds"].append(file_path)
+
+                        last_comp = len(build_batches[position]["components"])-1
+                        build_batches[position]["batch_state"] = self.states[3]
+                        build_batches[position]["curr_comp_state"] = self.states[3]
+                        build_batches[position]["curr_comp"] = last_comp
+                        msg = "Batch number '{num}' of context '{context}' is finished.".format(
+                            num=position,
+                            context=context_name,
+                        )
+                        logging.info(msg)
+                    else:
+                        msg = ("Context dir of context '{context}' is corrupted! The batch dir "
+                               "'{dir}' of batch number '{num}' does not exist!")
+                        raise Exception(msg)
+
+            else:
+                # if the context is not finished we need to find at which batch and which 
+                # component has failed last time
+                msg = ("Found an unfinished context! Context '{context}' is NOT finished. "
+                       "Extracting and processing metadata. Setting context '{context}' as "
+                       "the resume point.").format(context=context_name)
+                logging.info(msg)
+
+                # we set the context resume point and the state of the context to "building"
+                resume_point["context"] = context_name
+                context["status"]["state"] = self.states[1]
+
+                msg = "Finding existing batch directories of context '{context}'...".format(
+                    context=context_name)
+                logging.info(msg)
+
+                for position in sorted(build_batches):
+                    actual_batch_name = "batch_{position}".format(position=position)
+                    
+                    # we search through the existing batch dirs in the context dir.
+                    if actual_batch_name in batch_dirs:
+                        batch_dir = build_batches_dir + "/" + actual_batch_name
+                        finished = [f for f in os.listdir(batch_dir) if f == "finished"]
+                        msg = "Processing batch number '{num}' of context '{context}'...".format(
+                            num=position, context=context_name)
+                        logging.info(msg)
+
+                        # if the batch dir exist we add it to the builder metadata 
+                        build_batches[position]["dir"] = batch_dir
+                        if finished:
+                            # if the batch is marked as finished we get the build rpms and add them
+                            # to the builder metadata
+                            for comp in build_batches[position]["components"]:
+                                comp_dir = batch_dir + "/" + comp["name"]
+                                rpm_files = [f for f in os.listdir(comp_dir) if f.endswith("rpm")]
+                                for rpm in rpm_files:
+                                    file_path = comp_dir + "/" + rpm
+                                    build_batches[position]["finished_builds"].append(file_path)
+
+                            last_comp = len(build_batches[position]["components"])-1
+                            build_batches[position]["batch_state"] = self.states[3]
+                            build_batches[position]["curr_comp_state"] = self.states[3]
+                            build_batches[position]["curr_comp"] = last_comp
+                            msg = "Batch number '{num}' of context '{context}' is finished.".format(
+                                num=position,
+                                context=context_name,
+                            )
+                            logging.info(msg)
+                        else:
+                            # if a batch is not finished we need to identify which component failed
+                            msg = ("Found an unfinished batch! Batch number '{num}' of context"
+                                   " '{context}' is NOT finished. Setting batch number '{num}' "
+                                   "of context '{context}' as the resume point.").format(
+                                num=position, context=context_name)
+                            logging.info(msg)
+
+                            # we set the batch resume point and the batch state to 'building'
+                            resume_point["batch"] = position
+                            context["status"]["current_build_batch"] = position
+                            build_batches[position]["batch_state"] = self.states[1]
+
+                            for index, comp in enumerate(build_batches[position]["components"]):
+                                comp_dir = batch_dir + "/" + comp["name"]
+
+                                # we check if the component dir exists
+                                if os.path.isdir(comp_dir):
+                                    msg = ("Processing component '{name}' of batch number '{num}' "
+                                           "of context '{context}'...").format(
+                                        num=position, context=context_name, name=comp["name"])
+                                    logging.info(msg)
+
+                                    finished = [f for f in os.listdir(comp_dir) if f == "finished"]
+                                    # we find out if the dir is marked as finished
+                                    if finished:
+                                        msg = ("Component '{name}' of batch number '{num}' of "
+                                               "context '{context}' is finished.").format(
+                                            num=position,
+                                            context=context_name,
+                                            name=comp["name"])
+                                        logging.info(msg)
+                                        # if the component is finished we add the information
+                                        # about the artifacts to the builder metadata
+                                        filenames = os.listdir(comp_dir)
+                                        rpm_files = [f for f in filenames if f.endswith("rpm")]
+                                        for rpm in rpm_files:
+                                            file_path = comp_dir + "/" + rpm
+                                            build_batches[position]["finished_builds"].append(
+                                                file_path)
+                                    else:
+                                        # if an unfinished component is found we update the batch
+                                        # and set the component resume point
+                                        msg = ("Found an unfinished component! Component '{name}'"
+                                               " of batch number '{num}' of context '{context}' is "
+                                               "NOT finished. Setting component '{name}' as the "
+                                               "resume point.")
+                                        build_batch = build_batches[position]
+                                        build_batch["batch_state"] = self.states[1]
+                                        build_batch["curr_comp_state"] = self.states[0]
+                                        build_batch["curr_comp"] = index
+                                        resume_point["component"] = comp["name"]
+                                        shutil.rmtree(comp_dir)
+                                        break
+                                else:
+                                    # if the directory of the current component does not exist and
+                                    # we have not found any unfinished component until now, this 
+                                    # means that for some reason the directory of the unfinished
+                                    # component does not exist anymore and we set the resume point
+                                    # to that component
+                                    if "component" not in resume_point:
+                                        msg = ("Found an unfinished component! "
+                                               "It seems that the component directory of component "
+                                               "'{name}' does not exist. Component '{name}' is "
+                                               "next in line for building. Setting component "
+                                               "'{name}' as the resume point.").format(
+                                                   name=comp["name"])
+                                        logging.info(msg)
+
+                                        build_batch = build_batches[position]
+                                        build_batch["batch_state"] = self.states[1]
+                                        build_batch["curr_comp_state"] = self.states[0]
+                                        build_batch["curr_comp"] = index
+                                        resume_point["component"] = comp["name"]
+                                        break
+
+                            # if for some reason all the components are finished but the resume
+                            # point for the component has not been set, we asume that the batch
+                            # is finished but was not set to the finished state.
+                            if index+1 == len(build_batches[position]["components"]):
+                                if "component" not in resume_point:
+                                    yaml_file = [f for f in os.listdir() if f.endswith("yaml")]
+                                    
+                                    if len(yaml_file):
+                                        yaml_file_path = batch_dir + "/" + yaml_file[0]
+                                        shutil.rmtree(yaml_file_path)
+
+                                    build_batch = build_batches[position]
+                                    last_comp = len(build_batch["components"])-1
+                                    build_batch["batch_state"] = self.states[3]
+                                    build_batch["curr_comp_state"] = self.states[3]
+                                    build_batch["curr_comp"] = last_comp
+                                    self.finalize_batch(position, context_name)
+                                    msg = ("Batch number '{num}' of context '{context}'"
+                                           " is finished.").format(
+                                        num=position,
+                                        context=context_name,
+                                    )
+                                    logging.info(msg)
+                                    # after we finalize the current branch we set the resume point
+                                    # to the first component of the next batch
+                                    next_batch_position = position+1
+                                    
+                                    # we need to find out if this is the last batch in the context
+                                    if next_batch_position in build_batches:
+                                       next_batch = build_batches[next_batch_position]
+                                       next_comp = next_batch["components"][0]
+                                    else:
+                                       # if there is no other batch then we set the resume point for
+                                       # the component to the last component of the current batch
+                                       next_batch_position = position
+                                       next_comp = build_batch["components"][last_comp]
+
+                                    resume_point["batch"] = next_batch_position
+                                    resume_point["component"] = next_comp["name"]
+                                    break
+                    else:
+                        # if the next batch to build is not present between the batch dirs
+                        # the batch and its first component should be set as the resume point. 
+                        resume_point["batch"] = position
+                        resume_point["component"] = build_batches[position]["components"][0]["name"]
+                        break
+
+            context["dir"] = cd_path
+        
+        if resume_point:
+            # if there is something to resume, the resume point will be at least populated by the 
+            # context to resume. When we have a resume point we need to remove final repo because
+            # the number of build RPMs can change.
+            # TODO put the removing of final repo to its own method
+            context_dir_path = self.build_contexts[context_name]["dir"]
+            final_repo_path = context_dir_path + "/final_repo"
+
+            if os.path.isdir(final_repo_path):
+                logging.info("Removing old final repo...")
+
+                shutil.rmtree(final_repo_path)
+            
+            if len(resume_point) and "context" in resume_point:
+                context_name = resume_point["context"]
+
+                msg = ("The context '{name}' has finished building all its batches and components."
+                       "It seems it was not finalized. Finalizing context...").format(
+                           name=context_name)
+
+            else: 
+                msg = ("According to the files and metadata provided from the working directory "
+                    "'{dir}' the resume point of the module build has been identified.\nThe build"
+                    " will resume building at component '{comp}' of build batch number '{num}' of "
+                    "build context '{context}'").format(dir=self.workdir,
+                                                        comp=resume_point["component"],
+                                                        num=resume_point["batch"],
+                                                        context=resume_point["context"])
+        else:
+            msg = ("No resume point found! It seems all batches and components of your module "
+                   "stream are built!")
+        logging.info(msg)
 
 
 class MockBuildroot:
@@ -377,10 +835,21 @@ class MockBuildroot:
                         rpm_suffix=self.rpm_suffix),
                     "--addrepo={repo}".format(repo=self.batch_repo),
                     ]
-        proc = subprocess.Popen(mock_cmd)
-        out, err = proc.communicate()
+        msg = "Running mock buildroot for component '{name}' with command:\n{cmd}".format(
+            name=self.component["name"],
+            cmd=mock_cmd,
+        )
+        logging.info(msg)
+        stdout_log_file_path = self.result_dir_path + "/mock_stdout.log"
 
-        self.finished = True
+        msg = "The 'stdout' of the mock buildroot process is written to: {path}".format(
+            path=stdout_log_file_path)
+        logging.info(msg)
+
+        with open(stdout_log_file_path, "w") as f:
+            proc = subprocess.Popen(mock_cmd, stdout=f, stderr=f,
+                                    universal_newlines=True)
+        out, err = proc.communicate()
 
         if proc.returncode != 0:
             err_msg = "Command '{cmd}' returned non-zero value {code}\n{err}".format(
@@ -389,6 +858,15 @@ class MockBuildroot:
                 err=err,
             )
             raise RuntimeError(err_msg)
+
+        msg = "Mock buildroot finished build of component '{name}' successfully!".format(
+            name=self.component["name"]
+        )
+        logging.info(msg)
+        logging.info("---------------------------------")
+
+        self.finished = True
+        self._finalize_component()
 
         return out, err
 
@@ -402,10 +880,24 @@ class MockBuildroot:
             # TODO add exception
             pass
 
+    def _finalize_component(self):
+        if self.finished:
+            finished_file_path = self.result_dir_path + "/finished" 
+            with open(finished_file_path, "w") as f:
+                f.write("finished")
+        else:
+            # TODO add exception
+            pass
 
     def _create_buildroot_result_dir(self):
         result_dir_path = os.path.join(self.batch_dir_path, self.component["name"])
         os.makedirs(result_dir_path)
+
+        msg = "Created result dir for '{name}' mock build: {path}".format(
+            name=self.component["name"],
+            path=result_dir_path,
+        )
+        logging.info(msg)
 
         return result_dir_path
 
@@ -418,10 +910,10 @@ class MockBuildroot:
         with open(mock_cfg_file_path, "w") as f:
             f.write(self.mock_cfg_str)
 
+        msg = "Mock config for '{name}' component written to: {path}".format(
+            name=self.component["name"],
+            path=mock_cfg_file_path,
+        )
+        logging.info(msg)
+
         return mock_cfg_file_path
-
-
-class ModuleBuildRPM:
-    def __init__(self):
-        # TODO NVR should be something like perl-CGI-4.53-2.module_<platform_name>+<context_name>
-        pass

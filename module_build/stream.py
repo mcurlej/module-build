@@ -11,13 +11,15 @@ class ModuleStream:
             # TODO name is taked from the repo name when building from a SCM. When building localy
             # we need to find out if we will provide some automatic substitution or error out
             raise Exception(("The module stream metadata file does not provide a name for the "
-                             "module!"))
+                             "module! Please set the module name in the metadata file or provide "
+                             "it throught the `--module-name` cli parameter."))
         self.stream = mmd.get_stream_name()
         if not self.stream:
             # TODO stream is taked from the branch name when building from a SCM. When building
             # localy we need to find out if we will provide some automatic substitution or error out
             raise Exception(("The module stream metadata file does not provide a name for the "
-                             "stream!"))
+                             "stream! Please set the stream name in the metadata file or provide "
+                             "it throught the `--stream-name` cli parameter."))
 
         self.version = version
         self.description = mmd.get_description()
@@ -83,8 +85,12 @@ class ModuleStreamContext:
         self.stream = mmd.get_stream_name()
         self.context_name = mmd.get_context()
         self.build_opts = mmd.get_buildopts()
-        self.rpm_macros = self.build_opts.get_rpm_macros().split("\n")
-        self.rpm_whitelist = self.build_opts.get_rpm_whitelist()
+        if self.build_opts:
+            self.rpm_macros = self.build_opts.get_rpm_macros().split("\n")
+            self.rpm_whitelist = self.build_opts.get_rpm_whitelist()
+        else:
+            self.rpm_macros = []
+            self.rpm_whitelist = []
         self.dependencies = self._get_dependencies(mmd)
         self.demodularized_rpms = mmd.get_demodularized_rpms()
 
