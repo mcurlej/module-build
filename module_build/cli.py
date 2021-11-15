@@ -39,7 +39,7 @@ def get_arg_parser():
                         help=("You can define the module name with this option if it is not"
                               " set in the provided modulemd yaml file."))
 
-    parser.add_argument("-s", "--stream-name", type=str,
+    parser.add_argument("-s", "--module-stream", type=str,
                         help=("You can define the module stream name with this option if it is not"
                               " set in the provided modulemd yaml file."))
 
@@ -58,6 +58,9 @@ def get_arg_parser():
     parser.add_argument("-p", "--add-repo", type=str, action="append",
                         help=("With this option you can provide external RPM repositories to the"
                               " buildroots of the module build. Can be used multiple times."))
+
+    parser.add_argument("-t", "--rootdir", type=str,
+                        help=("Provides a new location for you buildroots."))
 
     return parser
 
@@ -88,8 +91,8 @@ def main():
     if args.module_name:
         mmd.set_module_name(args.module_name)
 
-    if args.stream_name:
-        mmd.set_stream_namd(args.module_stream)
+    if args.module_stream:
+        mmd.set_stream_name(args.module_stream)
     
     if args.module_version:
         version = args.module_version
@@ -108,11 +111,9 @@ def main():
     )
     logging.info(log_msg)
 
-    # TODO add --add-repo
-    # TODO enable preinstalled modules in buildroot an srpm buildroot
-    # TODO enable revive. add dummy files to done components
+    # TODO convert all relative paths to absolute 
     # TODO add exceptions
-    mock_builder = MockBuilder(args.mock_cfg, args.workdir, args.arch)
+    mock_builder = MockBuilder(args.mock_cfg, args.workdir, args.arch, args.add_repo, args.rootdir)
 
 # PHASE3: try to build the module stream
     #try:

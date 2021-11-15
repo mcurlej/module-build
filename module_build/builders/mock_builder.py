@@ -6,17 +6,23 @@ import subprocess
 import sys
 from collections import OrderedDict
 
+import mockbuild.config
+
 from module_build.metadata import (generate_and_populate_output_mmd, mmd_to_str,
                                    generate_module_stream_version)
+from module_build.modulemd import Modulemd
+
 
 class MockBuilder:
     # TODO enable building only specific contexts
     # TODO enable multiprocess queues for component building.
-    def __init__(self, mock_cfg_path, workdir, arch):
+    def __init__(self, mock_cfg_path, workdir, arch, external_repos, rootdir):
         self.states = ["init", "building", "failed", "finished"]
         self.workdir = workdir
         self.mock_cfg_path = mock_cfg_path
         self.arch = arch
+        self.external_repos = external_repos
+        self.rootdir = rootdir
 
     def build(self, module_stream, resume):
         # first we must process the metadata provided by the module stream
@@ -53,6 +59,12 @@ class MockBuilder:
             batch_repo_path = os.path.abspath(build_context["dir"] + "/build_batches")
             batch_repo = "file://{repo}".format(repo=batch_repo_path)
 
+            if not os.path.isdir(batch_repo_path):
+                os.makedirs(batch_repo_path)
+                msg = "Initializing batch repo for the first time..."
+                logging.info(msg)
+                self.call_createrepo_c_on_dir(batch_repo_path)
+
             sorted_batches = sorted(build_context["build_batches"])
             last_batch = sorted_batches[-1]
             # the keys in `build_context["build_batches"]` represent the `buildorder` of the context
@@ -79,12 +91,6 @@ class MockBuilder:
                 build_context["status"]["current_build_batch"] = position
                 build_context["build_batches"][position]["batch_state"] = self.states[1]
 
-                # create/update the repository in `build_batches` dir so we can use it as 
-                # modular batch dependency repository for buildtime dependencies. Each finished 
-                # batch will be used for the next one as modular dependency. 
-                msg = "Updating build batch modular repository..."
-                logging.info(msg)
-                self.call_createrepo_c_on_dir(batch_repo_path)
 
                 for index, component in enumerate(batch["components"]):
 
@@ -128,7 +134,7 @@ class MockBuilder:
                     buildroot = MockBuildroot(component, mock_cfg_str, batch["dir"], position,
                                               build_context["modularity_label"],
                                               build_context["rpm_suffix"],
-                                              batch_repo)
+                                              batch_repo, self.external_repos, self.rootdir)
 
                     buildroot.run()
 
@@ -229,6 +235,44 @@ class MockBuilder:
         :param module_stream: a module stream object
         :type module_stream: :class:`module_build.stream.ModuleBuild` object
         """
+        mock_path, mock_filename = self.mock_cfg_path.rsplit("/", 1)
+        mock_cfg = mockbuild.config.load_config(mock_path, self.mock_cfg_path, None,
+                                                module_stream.version, mock_path)
+
+        dist = None
+        if "dist" in mock_cfg:
+            dist = mock_cfg["dist"]
+             
+        if self.external_repos:
+            buildroot_profiles = {}
+            srpm_buildroot_profiles = {}
+
+            for repo in self.external_repos:
+                mi = Modulemd.ModuleIndex.new()
+                repodata_path = repo + "/repodata"
+                yaml_file = [f for f in os.listdir(repodata_path) if f.endswith(
+                    "modules.yaml.gz")]
+
+                if yaml_file:
+                    yaml_file_path = repodata_path + "/" + yaml_file[0]
+                    mi.update_from_file(yaml_file_path, True)
+                    streams = mi.search_streams()
+
+                    for s in streams:
+                        profiles = s.get_profile_names()
+                        name = s.get_module_name()
+                        stream = s.get_stream_name()
+                        module_stream_str = "{name}:{stream}".format(name=name, stream=stream)
+
+                        if "buildroot" in profiles:
+                            stream_profile = "{stream}/buildroot".format(stream=module_stream_str)
+                            buildroot_profiles[module_stream_str] = stream_profile
+
+                        if "srpm-buildroot" in profiles:
+                            stream_profile = "{stream}/srpm-buildroot".format(
+                                stream=module_stream_str)
+                            srpm_buildroot_profiles[module_stream_str] = stream_profile
+
         build_contexts = OrderedDict()
 
         for context in module_stream.contexts:
@@ -240,9 +284,12 @@ class MockBuilder:
                 "nsvca": context.get_NSVCA(),
                 "modularity_label": context.get_modularity_label(),
                 "metadata": context,
-                "rpm_suffix": context.get_rpm_suffix(),
+                "rpm_suffix": context.get_rpm_suffix(dist),
                 "modular_deps": context.dependencies,
                 "rpm_macros": context.rpm_macros,
+                "filtered_rpms": module_stream.filtered_rpms,
+                "buildroot_profiles": [],
+                "srpm_buildroot_profiles": [],
                 "status": {
                     "state": self.states[0],
                     "current_build_batch": 0,
@@ -250,6 +297,19 @@ class MockBuilder:
                     "num_finished_comps": 0,
                 }
             }
+
+            if buildroot_profiles:
+                for ms in build_context["modular_deps"]["buildtime"]:
+                    if ms in buildroot_profiles:
+                        stream_profile = buildroot_profiles[ms]
+                        build_context["buildroot_profiles"].append(stream_profile)
+
+            if srpm_buildroot_profiles:
+                for ms in build_context["modular_deps"]["buildtime"]:
+                    if ms in srpm_buildroot_profiles:
+                        stream_profile = srpm_buildroot_profiles[ms]
+                        build_context["srpm_buildroot_profiles"].append(stream_profile)
+
             logging.info("Generating build batches from the components buildorder...")
             build_context["build_batches"] = self.generate_build_batches(module_stream.components)
             build_contexts[context.context_name] = build_context
@@ -315,11 +375,16 @@ class MockBuilder:
         # grouped into batch_0 by default and the `modular_batch_deps` will be an empty list.
         modular_batch_deps = context["build_batches"][batch_num]["modular_batch_deps"]
         modules_to_enable = modular_deps + modular_batch_deps
-
         mock_cfg_str += "# we enable necesary build module dependencies.\n"
         mock_cfg_str += "config_opts['module_enable'] = {modules}\n".format(
             modules=modules_to_enable)
 
+        buildroot_profiles = context["buildroot_profiles"]
+        srpm_buildroot_profiles = context["srpm_buildroot_profiles"]
+        profiles_to_install = buildroot_profiles + srpm_buildroot_profiles
+
+        mock_cfg_str += "config_opts['module_install'] = {profiles}\n".format(
+            profiles=profiles_to_install)
 
         mock_cfg_str += "# we set the necessary macros provided by the `build_opts` option.\n"
         for m in context["rpm_macros"]:
@@ -406,6 +471,13 @@ class MockBuilder:
             logging.info(msg)
             msg = "Modular metadata written to: {path}".format(path=file_path)
 
+            # create/update the repository in `build_batches` dir so we can use it as 
+            # modular batch dependency repository for buildtime dependencies. Each finished 
+            # batch will be used for the next one as modular dependency. 
+            msg = "Updating build batch modular repository..."
+            logging.info(msg)
+            build_batches_dir = self.build_contexts[context_name]["dir"] + "/build_batches"
+            self.call_createrepo_c_on_dir(build_batches_dir)
         # we create a dummy file which marks the whole batch as finished. This serves as a marker
         # for the --resume feature to mark the whole build as finished
         finished_file_path = batch_dir + "/finished" 
@@ -479,6 +551,21 @@ class MockBuilder:
 
         self.build_contexts[context_name]["final_repo_path"] = final_repo_dir 
         self.build_contexts[context_name]["final_yaml_path"] = mmd_yaml_file_path
+
+        # if the module steam has configured rpm filters we filter out the rpms which should not
+        # be present in the final repo
+        filtered_rpms = self.build_contexts[context]["filtered_rpms"]
+
+        if filtered_rpms:
+            rpm_filenames = [f for f in os.listdir(final_repo_dir) if f.endswith("rpm")]
+            for f in rpm_filenames:
+                rpm_name = f.rsplit("-", 2)[0]
+                if rpm_name in filtered_rpms:
+                    file_path = final_repo_dir + "/" + f
+                    msg = "Filtering out '{rpm}' from the final repo...".format(rpm=f)
+                    logging.info(msg)
+                    os.remove(file_path)
+
         self.call_createrepo_c_on_dir(final_repo_dir)
 
         # we create a dummy file which marks the whole repo as finished. This serves as a marker
@@ -551,6 +638,8 @@ class MockBuilder:
             # we look for the finished filename in the context dir
             finished = [f for f in os.listdir(cd_path) if f == "finished"]
             context = self.build_contexts[context_name]
+            # we set dir for the existing context
+            context["dir"] = cd_path
             build_batches_dir = cd_path + "/build_batches"
             batch_dirs = [d for d in os.listdir(build_batches_dir) if d.startswith("batch")]
 
@@ -573,6 +662,8 @@ class MockBuilder:
                             num=position, context=context_name)
                         logging.info(msg)
 
+                        # we set the dir for existing batch
+                        build_batches[position]["dir"] = batch_dir
                         for comp in build_batches[position]["components"]:
                             comp_dir = batch_dir + "/" + comp["name"]
 
@@ -627,6 +718,7 @@ class MockBuilder:
                     # we search through the existing batch dirs in the context dir.
                     if actual_batch_name in batch_dirs:
                         batch_dir = build_batches_dir + "/" + actual_batch_name
+
                         finished = [f for f in os.listdir(batch_dir) if f == "finished"]
                         msg = "Processing batch number '{num}' of context '{context}'...".format(
                             num=position, context=context_name)
@@ -734,11 +826,12 @@ class MockBuilder:
                             # is finished but was not set to the finished state.
                             if index+1 == len(build_batches[position]["components"]):
                                 if "component" not in resume_point:
-                                    yaml_file = [f for f in os.listdir() if f.endswith("yaml")]
-                                    
+                                    yaml_file = [f for f in os.listdir(batch_dir) if f.endswith(
+                                        "yaml")]
+
                                     if len(yaml_file):
                                         yaml_file_path = batch_dir + "/" + yaml_file[0]
-                                        shutil.rmtree(yaml_file_path)
+                                        os.remove(yaml_file_path)
 
                                     build_batch = build_batches[position]
                                     last_comp = len(build_batch["components"])-1
@@ -791,7 +884,7 @@ class MockBuilder:
 
                 shutil.rmtree(final_repo_path)
             
-            if len(resume_point) and "context" in resume_point:
+            if len(resume_point) and len(resume_point) == 1 and "context" in resume_point:
                 context_name = resume_point["context"]
 
                 msg = ("The context '{name}' has finished building all its batches and components."
@@ -814,7 +907,7 @@ class MockBuilder:
 
 class MockBuildroot:
     def __init__(self, component, mock_cfg_str, batch_dir_path, batch_num, modularity_label,
-                 rpm_suffix, batch_repo):
+                 rpm_suffix, batch_repo, external_repos, rootdir):
 
         self.finished = False
         self.component = component
@@ -826,6 +919,8 @@ class MockBuildroot:
         self.result_dir_path = self._create_buildroot_result_dir()
         self.mock_cfg_path = self._create_mock_cfg_file()
         self.batch_repo = batch_repo
+        self.external_repos = external_repos
+        self.rootdir = rootdir
 
     def run(self):
         mock_cmd = ["mock", "-v", "-r", self.mock_cfg_path,
@@ -835,6 +930,14 @@ class MockBuildroot:
                         rpm_suffix=self.rpm_suffix),
                     "--addrepo={repo}".format(repo=self.batch_repo),
                     ]
+
+        if self.external_repos:
+            for repo in self.external_repos:
+                mock_cmd.append("--addrepo=file://{repo}".format(repo=repo))
+
+        if self.rootdir:
+            mock_cmd.append("--rootdir={rootdir}".format(rootdir=self.rootdir))
+
         msg = "Running mock buildroot for component '{name}' with command:\n{cmd}".format(
             name=self.component["name"],
             cmd=mock_cmd,

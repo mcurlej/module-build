@@ -1,4 +1,4 @@
-
+from module_build.modulemd import Modulemd
 
 class ModuleStream:
 
@@ -27,6 +27,7 @@ class ModuleStream:
         self.contexts = self.process_build_configurations(mmd)
 
         self.components = self.process_components(mmd)
+        self.filtered_rpms = mmd.get_rpm_filters_as_strv()
 
     def process_build_configurations(self, mmd):
         index = mmd.convert_to_index()
@@ -112,21 +113,30 @@ class ModuleStreamContext:
             "buildtime": [],
             "runtime": [],
         }
+        # we need to filter out platform from our mmd
+        new_deps = Modulemd.Dependencies()
 
         buidtime_dep_names = dependencies.get_buildtime_modules()
         for name in buidtime_dep_names:
             # NOTE: platform is not a real build or runtime dependency.
             if name != "platform":
-                stream = dependencies.get_buildtime_streams(name)
-                processed_deps["buildtime"].append("{name}:{stream}".format(name=name,
-                                                                            stream=stream))
-        runtime_dep_names = dependencies.get_runtime_modules()
+                streams = dependencies.get_buildtime_streams(name)
+                for stream in streams:
+                    new_deps.add_buildtime_stream(name, stream)
+                    processed_deps["buildtime"].append("{name}:{stream}".format(name=name,
+                                                                                stream=stream))
 
+        runtime_dep_names = dependencies.get_runtime_modules()
         for name in runtime_dep_names:
             # NOTE: platform is not a real build or runtime dependency.
             if name != "platform":
-                stream = dependencies.get_runtime_streams(name)
-                processed_deps["runtime"].append("{name}:{stream}".format(name=name, stream=stream))
+                streams = dependencies.get_runtime_streams(name)
+                for stream in streams:
+                    new_deps.add_runtime_stream(name, stream)
+                    processed_deps["runtime"].append("{name}:{stream}".format(name=name,
+                                                                              stream=stream))
+        mmd.remove_dependencies(dependencies)
+        mmd.add_dependencies(new_deps)
 
         return processed_deps
 
@@ -136,6 +146,9 @@ class ModuleStreamContext:
                                                             version=self.version, 
                                                             context=self.context_name)
 
-    def get_rpm_suffix(self):
-        return ".module_{platform}+{context}".format(platform=self.platform,
+    def get_rpm_suffix(self, dist=None):
+        if not dist:
+            dist = self.platform
+
+        return ".module_{dist}+{context}".format(dist=dist,
                                                      context=self.context_name)
