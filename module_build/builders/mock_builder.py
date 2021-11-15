@@ -1,5 +1,4 @@
 import copy
-import logging
 import os
 import shutil
 import subprocess
@@ -8,6 +7,7 @@ from collections import OrderedDict
 
 import mockbuild.config
 
+from module_build.log import logger
 from module_build.metadata import (generate_and_populate_output_mmd, mmd_to_str,
                                    generate_module_stream_version)
 from module_build.modulemd import Modulemd
@@ -27,12 +27,12 @@ class MockBuilder:
     def build(self, module_stream, resume):
         # first we must process the metadata provided by the module stream
         # components need to be organized to `build_batches`
-        logging.info("Processing buildorder of the module stream.")
+        logger.info("Processing buildorder of the module stream.")
         self.create_build_contexts(module_stream)
 
         if resume:
             msg = "------------- Resuming Module Build --------------"
-            logging.info(msg)
+            logger.info(msg)
             self.find_and_set_resume_point()
 
         # when the metadata processing is done, we can ge to the building of the defined `contexts`
@@ -43,14 +43,14 @@ class MockBuilder:
                     context=context_name,
                     state=self.states[3],
                 )
-                logging.info(msg)
+                logger.info(msg)
                 continue
 
             msg = "Building context '{context}' of module stream '{module}:{stream}'...".format(
                 context=context_name,
                 module=module_stream.name,
                 stream=module_stream.stream)
-            logging.info(msg)
+            logger.info(msg)
             # we create a dir for the contexts where we will store everything related to a `context`
             if "dir" not in build_context:
                 build_context["dir"] = self.create_build_context_dir(context_name)
@@ -62,7 +62,7 @@ class MockBuilder:
             if not os.path.isdir(batch_repo_path):
                 os.makedirs(batch_repo_path)
                 msg = "Initializing batch repo for the first time..."
-                logging.info(msg)
+                logger.info(msg)
                 self.call_createrepo_c_on_dir(batch_repo_path)
 
             sorted_batches = sorted(build_context["build_batches"])
@@ -79,11 +79,11 @@ class MockBuilder:
                         state=self.states[3],
                         num=position,
                     )
-                    logging.info(msg)
+                    logger.info(msg)
                     continue
 
                 msg = "Building batch number {num}...".format(num=position)
-                logging.info(msg)
+                logger.info(msg)
 
                 if "dir" not in batch:
                     batch["dir"] = self.create_build_batch_dir(context_name, position)
@@ -101,19 +101,19 @@ class MockBuilder:
                                    num=position,
                                    context=context_name,
                                )
-                        logging.info(msg)
+                        logger.info(msg)
                         continue
 
                     msg = "Building component {index} out of {all}...".format(
                         index=index+1,
                         all=len(batch["components"]))
-                    logging.info(msg)
+                    logger.info(msg)
 
                     msg = ("Building component '{name}' out of batch '{batch}' from context"
                            " '{context}'...").format(name=component["name"],
                                                      batch=position,
                                                      context=context_name)
-                    logging.info(msg)
+                    logger.info(msg)
 
                     build_context["build_batches"][position]["curr_comp"] = index
                     build_context["build_batches"][position]["curr_comp_state"] = self.states[1]
@@ -121,7 +121,7 @@ class MockBuilder:
                     msg = "Generating mock config for component '{name}'...".format(
                         name=component["name"]
                     )
-                    logging.info(msg)
+                    logger.info(msg)
                     # we prepare a mock config for the mock buildroot.
                     mock_cfg_str = self.generate_and_process_mock_cfg(component, context_name,
                                                                       position)
@@ -129,7 +129,7 @@ class MockBuilder:
                     msg = "Initializing mock buildroot for component '{name}'...".format(
                         name=component["name"]
                     )
-                    logging.info(msg)
+                    logger.info(msg)
 
                     buildroot = MockBuildroot(component, mock_cfg_str, batch["dir"], position,
                                               build_context["modularity_label"],
@@ -202,7 +202,7 @@ class MockBuilder:
                     ))
 
         msg = "The following build batches where identified according to the buildorder:"
-        logging.info(msg)
+        logger.info(msg)
 
         msg_batch = ""
         for order in sorted_build_batches:
@@ -221,10 +221,10 @@ class MockBuilder:
             ---------------------""".format(order=order, count=len(comp_names),
                                             comp_names=comp_names,
                                             deps=build_batches[order]["modular_batch_deps"])
-        logging.info(msg_batch)
+        logger.info(msg_batch)
 
         msg = "Total build batches count: {num}".format(num=len(sorted_build_batches))
-        logging.info(msg)
+        logger.info(msg)
 
         return build_batches
 
@@ -243,10 +243,9 @@ class MockBuilder:
         if "dist" in mock_cfg:
             dist = mock_cfg["dist"]
              
+        buildroot_profiles = {}
+        srpm_buildroot_profiles = {}
         if self.external_repos:
-            buildroot_profiles = {}
-            srpm_buildroot_profiles = {}
-
             for repo in self.external_repos:
                 mi = Modulemd.ModuleIndex.new()
                 repodata_path = repo + "/repodata"
@@ -277,7 +276,7 @@ class MockBuilder:
 
         for context in module_stream.contexts:
             msg = "Processing '{context}' context...".format(context=context.context_name)
-            logging.info(msg)
+            logger.info(msg)
             context.set_arch(self.arch)
             build_context = {
                 "name": context.context_name,
@@ -310,7 +309,7 @@ class MockBuilder:
                         stream_profile = srpm_buildroot_profiles[ms]
                         build_context["srpm_buildroot_profiles"].append(stream_profile)
 
-            logging.info("Generating build batches from the components buildorder...")
+            logger.info("Generating build batches from the components buildorder...")
             build_context["build_batches"] = self.generate_build_batches(module_stream.components)
             build_contexts[context.context_name] = build_context
 
@@ -328,7 +327,7 @@ class MockBuilder:
 
         msg = "Created dir for '{context}' context: {path}".format(context=context_name,
                                                                    path=context_dir_path)
-        logging.info(msg)
+        logger.info(msg)
 
         return context_dir_path
 
@@ -349,7 +348,7 @@ class MockBuilder:
             context=context_name,
             path=batches_dir_path,
         )
-        logging.info(msg)
+        logger.info(msg)
 
         return batches_dir_path
 
@@ -401,17 +400,17 @@ class MockBuilder:
 
     def finalize_batch(self, position, context_name):
         msg = "Batch number {num} finished building all its components.".format(num=position)
-        logging.info(msg)
+        logger.info(msg)
 
         build_batch = self.build_contexts[context_name]["build_batches"][position]
 
         msg = "Artifact count: {count}".format(count=len(build_batch["finished_builds"]))
-        logging.info(msg)
+        logger.info(msg)
 
         msg = "\nList of artifacts:\n"
         for fb in build_batch["finished_builds"]:
             msg += "- {file_path}\n".format(file_path=fb)
-        logging.info(msg)
+        logger.info(msg)
 
         num_batches = len(self.build_contexts[context_name]["build_batches"])
         last_batch = sorted(self.build_contexts[context_name]["build_batches"])[-1]
@@ -468,14 +467,14 @@ class MockBuilder:
             msg = ("Batch number {position} is defined as modular batch dependency for batches "
                    "{num}-{last_batch}").format(position=position, num=position + 1,
                                                 last_batch=last_batch)
-            logging.info(msg)
+            logger.info(msg)
             msg = "Modular metadata written to: {path}".format(path=file_path)
 
             # create/update the repository in `build_batches` dir so we can use it as 
             # modular batch dependency repository for buildtime dependencies. Each finished 
             # batch will be used for the next one as modular dependency. 
             msg = "Updating build batch modular repository..."
-            logging.info(msg)
+            logger.info(msg)
             build_batches_dir = self.build_contexts[context_name]["dir"] + "/build_batches"
             self.call_createrepo_c_on_dir(build_batches_dir)
         # we create a dummy file which marks the whole batch as finished. This serves as a marker
@@ -490,7 +489,7 @@ class MockBuilder:
         msg = "createrepo_c called on dir: {path}".format(
             path=dir,
         )
-        logging.info(msg)
+        logger.info(msg)
 
         mock_cmd = ["createrepo_c", dir]
         proc = subprocess.Popen(mock_cmd)
@@ -506,7 +505,7 @@ class MockBuilder:
     def finalize_build_context(self, context_name):
         msg = "Context '{name}' finished building all its batches...".format(
             name=context_name)
-        logging.info(msg)
+        logger.info(msg)
         context_dir = self.build_contexts[context_name]["dir"]
         final_repo_dir = context_dir + "/final_repo"
         os.makedirs(final_repo_dir)
@@ -521,7 +520,7 @@ class MockBuilder:
 
         msg = ("Copying build artifacts from batches directories to the final repo"
                " dir: {path}").format(path=final_repo_dir)
-        logging.info(msg)
+        logger.info(msg)
 
         for bb in self.build_contexts[context_name]["build_batches"].values():
             for file_path in bb["finished_builds"]:
@@ -563,7 +562,7 @@ class MockBuilder:
                 if rpm_name in filtered_rpms:
                     file_path = final_repo_dir + "/" + f
                     msg = "Filtering out '{rpm}' from the final repo...".format(rpm=f)
-                    logging.info(msg)
+                    logger.info(msg)
                     os.remove(file_path)
 
         self.call_createrepo_c_on_dir(final_repo_dir)
@@ -621,7 +620,7 @@ class MockBuilder:
                 dir=self.workdir))
 
         msg = "Found possible context directories: {dirs}".format(dirs=context_dirs)
-        logging.info(msg)
+        logger.info(msg)
 
         for context_name, context in self.build_contexts.items(): 
             build_batches = context["build_batches"]
@@ -648,7 +647,7 @@ class MockBuilder:
                 # the current state of the context in the working directory.
                 msg = ("Context '{context}' is finished. Extracting and processing "
                        "metadata...").format(context=context_name)
-                logging.info(msg)
+                logger.info(msg)
 
                 context["status"]["state"] = self.states[3]
 
@@ -660,7 +659,7 @@ class MockBuilder:
                         finished = [f for f in os.listdir(batch_dir) if f == "finished"]
                         msg = "Processing batch number '{num}' of context '{context}'...".format(
                             num=position, context=context_name)
-                        logging.info(msg)
+                        logger.info(msg)
 
                         # we set the dir for existing batch
                         build_batches[position]["dir"] = batch_dir
@@ -690,7 +689,7 @@ class MockBuilder:
                             num=position,
                             context=context_name,
                         )
-                        logging.info(msg)
+                        logger.info(msg)
                     else:
                         msg = ("Context dir of context '{context}' is corrupted! The batch dir "
                                "'{dir}' of batch number '{num}' does not exist!")
@@ -702,7 +701,7 @@ class MockBuilder:
                 msg = ("Found an unfinished context! Context '{context}' is NOT finished. "
                        "Extracting and processing metadata. Setting context '{context}' as "
                        "the resume point.").format(context=context_name)
-                logging.info(msg)
+                logger.info(msg)
 
                 # we set the context resume point and the state of the context to "building"
                 resume_point["context"] = context_name
@@ -710,7 +709,7 @@ class MockBuilder:
 
                 msg = "Finding existing batch directories of context '{context}'...".format(
                     context=context_name)
-                logging.info(msg)
+                logger.info(msg)
 
                 for position in sorted(build_batches):
                     actual_batch_name = "batch_{position}".format(position=position)
@@ -722,7 +721,7 @@ class MockBuilder:
                         finished = [f for f in os.listdir(batch_dir) if f == "finished"]
                         msg = "Processing batch number '{num}' of context '{context}'...".format(
                             num=position, context=context_name)
-                        logging.info(msg)
+                        logger.info(msg)
 
                         # if the batch dir exist we add it to the builder metadata 
                         build_batches[position]["dir"] = batch_dir
@@ -744,14 +743,14 @@ class MockBuilder:
                                 num=position,
                                 context=context_name,
                             )
-                            logging.info(msg)
+                            logger.info(msg)
                         else:
                             # if a batch is not finished we need to identify which component failed
                             msg = ("Found an unfinished batch! Batch number '{num}' of context"
                                    " '{context}' is NOT finished. Setting batch number '{num}' "
                                    "of context '{context}' as the resume point.").format(
                                 num=position, context=context_name)
-                            logging.info(msg)
+                            logger.info(msg)
 
                             # we set the batch resume point and the batch state to 'building'
                             resume_point["batch"] = position
@@ -766,7 +765,7 @@ class MockBuilder:
                                     msg = ("Processing component '{name}' of batch number '{num}' "
                                            "of context '{context}'...").format(
                                         num=position, context=context_name, name=comp["name"])
-                                    logging.info(msg)
+                                    logger.info(msg)
 
                                     finished = [f for f in os.listdir(comp_dir) if f == "finished"]
                                     # we find out if the dir is marked as finished
@@ -776,7 +775,7 @@ class MockBuilder:
                                             num=position,
                                             context=context_name,
                                             name=comp["name"])
-                                        logging.info(msg)
+                                        logger.info(msg)
                                         # if the component is finished we add the information
                                         # about the artifacts to the builder metadata
                                         filenames = os.listdir(comp_dir)
@@ -812,7 +811,7 @@ class MockBuilder:
                                                "next in line for building. Setting component "
                                                "'{name}' as the resume point.").format(
                                                    name=comp["name"])
-                                        logging.info(msg)
+                                        logger.info(msg)
 
                                         build_batch = build_batches[position]
                                         build_batch["batch_state"] = self.states[1]
@@ -844,7 +843,7 @@ class MockBuilder:
                                         num=position,
                                         context=context_name,
                                     )
-                                    logging.info(msg)
+                                    logger.info(msg)
                                     # after we finalize the current branch we set the resume point
                                     # to the first component of the next batch
                                     next_batch_position = position+1
@@ -880,7 +879,7 @@ class MockBuilder:
             final_repo_path = context_dir_path + "/final_repo"
 
             if os.path.isdir(final_repo_path):
-                logging.info("Removing old final repo...")
+                logger.info("Removing old final repo...")
 
                 shutil.rmtree(final_repo_path)
             
@@ -902,7 +901,7 @@ class MockBuilder:
         else:
             msg = ("No resume point found! It seems all batches and components of your module "
                    "stream are built!")
-        logging.info(msg)
+        logger.info(msg)
 
 
 class MockBuildroot:
@@ -942,12 +941,12 @@ class MockBuildroot:
             name=self.component["name"],
             cmd=mock_cmd,
         )
-        logging.info(msg)
+        logger.info(msg)
         stdout_log_file_path = self.result_dir_path + "/mock_stdout.log"
 
         msg = "The 'stdout' of the mock buildroot process is written to: {path}".format(
             path=stdout_log_file_path)
-        logging.info(msg)
+        logger.info(msg)
 
         with open(stdout_log_file_path, "w") as f:
             proc = subprocess.Popen(mock_cmd, stdout=f, stderr=f,
@@ -965,8 +964,8 @@ class MockBuildroot:
         msg = "Mock buildroot finished build of component '{name}' successfully!".format(
             name=self.component["name"]
         )
-        logging.info(msg)
-        logging.info("---------------------------------")
+        logger.info(msg)
+        logger.info("---------------------------------")
 
         self.finished = True
         self._finalize_component()
@@ -1000,7 +999,7 @@ class MockBuildroot:
             name=self.component["name"],
             path=result_dir_path,
         )
-        logging.info(msg)
+        logger.info(msg)
 
         return result_dir_path
 
@@ -1017,6 +1016,6 @@ class MockBuildroot:
             name=self.component["name"],
             path=mock_cfg_file_path,
         )
-        logging.info(msg)
+        logger.info(msg)
 
         return mock_cfg_file_path

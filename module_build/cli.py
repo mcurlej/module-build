@@ -1,8 +1,7 @@
 import argparse
-import logging
 
 from module_build.builders.mock_builder import MockBuilder
-from module_build.log import init_logging
+from module_build.log import init_logging, logger
 from module_build.metadata import (load_modulemd_file_from_path, load_modulemd_file_from_scm,
                                    generate_module_stream_version)
 from module_build.stream import ModuleStream
@@ -75,10 +74,10 @@ def main():
 
     # TODO this needs to be updated when scm checkout will be added
     yaml_filename = args.modulemd.split("/")[-1].rsplit(".", 1)[0]
-    init_logging(args.workdir, yaml_filename)
+    init_logging(args.workdir, yaml_filename, logger)
 
 # PHASE1: Load metadata and configuration provided by the user
-    logging.info("Processing provided module stream metadata...")
+    logger.info("Processing provided module stream metadata...")
     if args.modulemd:
         mmd = load_modulemd_file_from_path(args.modulemd)
         version = generate_module_stream_version()
@@ -97,7 +96,7 @@ def main():
     if args.module_version:
         version = args.module_version
 
-    logging.info("Initializing the module build process...")
+    logger.info("Initializing the module build process...")
     module_stream = ModuleStream(mmd, version)
 
     # TODO move the whole validation in the argparse
@@ -109,7 +108,7 @@ def main():
         name=module_stream.name,
         stream=module_stream.stream,
     )
-    logging.info(log_msg)
+    logger.info(log_msg)
 
     # TODO convert all relative paths to absolute 
     # TODO add exceptions
