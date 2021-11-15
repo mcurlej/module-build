@@ -28,9 +28,7 @@ def get_arg_parser():
 
     parser.add_argument("-c", "--mock-cfg", help="Path to the mock config.",
                         default=".", type=str, required=True)
-    parser.add_argument("-a", "--arch", required=True, type=str,
-                        help="Architecture for which the module is build.")
-    # TODO revive does not work
+
     parser.add_argument("-r", "--resume", action="store_true",
                         help="If set it will try to continue the build where it failed last time.")
 
@@ -112,7 +110,7 @@ def main():
 
     # TODO convert all relative paths to absolute 
     # TODO add exceptions
-    mock_builder = MockBuilder(args.mock_cfg, args.workdir, args.arch, args.add_repo, args.rootdir)
+    mock_builder = MockBuilder(args.mock_cfg, args.workdir, args.add_repo, args.rootdir)
 
 # PHASE3: try to build the module stream
     #try:

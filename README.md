@@ -80,10 +80,8 @@ $ python setup.py develop
 For now `module-build` only works with [Fedora dist-git](https://src.fedoraproject.org/browse/projects/). We assume that every ref of a component in your modulemd yaml file refers to a dist-git branch and every name of the component refers to a dist-git repository name.
 <br />
 <br />
-There are 4 required parameters for `module-build`:
+There are 3 required parameters for `module-build`:
 <br />
-<br />
-`--arch` - the system architecture for which you are building the module stream
 <br />
 `--mock-cfg` - mock configuration file
 <br />
@@ -93,7 +91,7 @@ There are 4 required parameters for `module-build`:
 <br />
 <br />
 ```
-$ module-build -f flatpak-runtime.yaml -a x86_64 -c /etc/mock/fedora-35-x86_64.cfg ./workdir
+$ module-build -f flatpak-runtime.yaml -c /etc/mock/fedora-35-x86_64.cfg ./workdir
 ```
 <br />
 
@@ -101,7 +99,7 @@ If your modulemd yaml file does not provide module name or module stream it can 
 <br />
 <br />
 ```
-$ module-build -f flatpak-runtime.yaml -a x86_64 -c /etc/mock/fedora-35-x86_64.cfg --module-name=flatpak-runtime --module-stream=devel ./workdir
+$ module-build -f flatpak-runtime.yaml -c /etc/mock/fedora-35-x86_64.cfg --module-name=flatpak-runtime --module-stream=devel ./workdir
 ```
 <br />
 <br />
@@ -111,7 +109,7 @@ If a build of a component fails you can resume the build from that component. Fo
 <br />
 <br />
 ```
-$ module-build -f flatpak-runtime.yaml -a x86_64 -c /etc/mock/fedora-35-x86_64.cfg --resume --module-version=20211112140429 ./workdir
+$ module-build -f flatpak-runtime.yaml -c /etc/mock/fedora-35-x86_64.cfg --resume --module-version=20211112140429 ./workdir
 ```
 <br />
 <br />
@@ -124,7 +122,7 @@ For example the `flatpak-runtime` module is a modular dependency for module `fla
 <br />
 <br />
 ```
-$ module-build -f flatpak-common.yaml -a x86_64 -c /etc/mock/fedora-35-x86_64.cfg --add-repo=/path/to/repository/containin/flatpak-runtime/module ./workdir
+$ module-build -f flatpak-common.yaml -c /etc/mock/fedora-35-x86_64.cfg --add-repo=/path/to/repository/containin/flatpak-runtime/module ./workdir
 ```
 <br />
 <br />
@@ -134,5 +132,5 @@ Sometimes a build of a component can consume a lot of disk space. By default `mo
 <br />
 <br />
 ```
-$ module-build -f flatpak-runtime.yaml -a x86_64 -c /etc/mock/fedora-35-x86_64.cfg --rootdir=/path/to/custom/dir/ ./workdir
+$ module-build -f flatpak-runtime.yaml -c /etc/mock/fedora-35-x86_64.cfg --rootdir=/path/to/custom/dir/ ./workdir
 ```

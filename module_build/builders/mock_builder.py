@@ -16,11 +16,10 @@ from module_build.modulemd import Modulemd
 class MockBuilder:
     # TODO enable building only specific contexts
     # TODO enable multiprocess queues for component building.
-    def __init__(self, mock_cfg_path, workdir, arch, external_repos, rootdir):
+    def __init__(self, mock_cfg_path, workdir, external_repos, rootdir):
         self.states = ["init", "building", "failed", "finished"]
         self.workdir = workdir
         self.mock_cfg_path = mock_cfg_path
-        self.arch = arch
         self.external_repos = external_repos
         self.rootdir = rootdir
 
@@ -242,6 +241,14 @@ class MockBuilder:
         dist = None
         if "dist" in mock_cfg:
             dist = mock_cfg["dist"]
+
+        if "target_arch" in mock_cfg:
+            self.arch = mock_cfg["target_arch"]
+        else:
+            raise Exception(("Your mock configuration file does not provide the information about "
+                             "the architecture for which the module stream should be build. Please"
+                             " inlcude the `target_arch` config option in your initial mock cfg!"))
+
              
         buildroot_profiles = {}
         srpm_buildroot_profiles = {}
