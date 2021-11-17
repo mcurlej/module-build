@@ -1,10 +1,36 @@
 import argparse
+import os
+import pdb
+import sys
+import traceback
 
 from module_build.builders.mock_builder import MockBuilder
 from module_build.log import init_logging, logger
 from module_build.metadata import (load_modulemd_file_from_path, load_modulemd_file_from_scm,
                                    generate_module_stream_version)
 from module_build.stream import ModuleStream
+
+
+class FullPathAction(argparse.Action):
+    """ A custom argparse action which converts all relative paths to absolute. """
+    def __call__(self, parser, args, values, option_string=None):
+        full_path = self._get_full_path(values)
+        # `add_repo` should be a `append` action
+        if self.dest == "add_repo":
+            add_repo = getattr(args, "add_repo")
+            add_repo.append(full_path)
+            setattr(args, self.dest, add_repo)
+        else:
+            setattr(args, self.dest, full_path)
+
+    def _get_full_path(self, path):
+        full_path = path
+
+        if not path.startswith("/"):
+            dir_path = os.getcwd()
+            full_path = os.path.abspath(os.path.join(dir_path, path))
+
+        return full_path
 
 
 def get_arg_parser():
@@ -15,19 +41,21 @@ def get_arg_parser():
     )
     parser = argparse.ArgumentParser("module-build", description=description,
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("workdir", type=str,
+    parser.add_argument("workdir", type=str, action=FullPathAction,
                         help=("The working directory where the build of a module stream will"
                               " happen."))
 
     group = parser.add_mutually_exclusive_group(required=True)
 
-    group.add_argument("-f", "--modulemd", type=str,
+    group.add_argument("-f", "--modulemd", type=str, action=FullPathAction,
                        help="Path to the modulemd yaml file")
-    group.add_argument("-g", "--git-branch", type=str,
-                       help=("URL to the git branch where the modulemd yaml file resides."))
+
+    #group.add_argument("-g", "--git-branch", type=str,
+    #                   help=("URL to the git branch where the modulemd yaml file resides."))
 
     parser.add_argument("-c", "--mock-cfg", help="Path to the mock config.",
-                        default=".", type=str, required=True)
+                        default=".", type=str, required=True,
+                        action=FullPathAction)
 
     parser.add_argument("-r", "--resume", action="store_true",
                         help="If set it will try to continue the build where it failed last time.")
@@ -41,18 +69,18 @@ def get_arg_parser():
                               " set in the provided modulemd yaml file."))
 
     parser.add_argument("-l", "--module-version", type=int,
-                        help=("You can define the module stream name with this option if it is not "
-                              " set unix timestamp will be used instead. This option is also used "
-                              "when using the resume feature. You can specify which module stream "
-                              "version you want to resume."))
+                        help=("You can define the module stream name with this option. If it is not"
+                              " set the current unix timestamp will be used instead. This option is"
+                              " also required when using the resume feature. You can specify which "
+                              "module stream version you want to resume."))
     # TODO verbose is not implemented
-    parser.add_argument("-v", "--verbose", action="store_true",
-                        help="Will display all output to stdout.")
+    #parser.add_argument("-v", "--verbose", action="store_true",
+    #                    help="Will display all output to stdout.")
 
     parser.add_argument("-d", "--debug", action="store_true",
-                        help="When the module build fails it will start the pdb debugger.")
-
-    parser.add_argument("-p", "--add-repo", type=str, action="append",
+                        help="When the module build fails it will start the python `pdb` debugger.")
+    parser.set_defaults(add_repo=[])
+    parser.add_argument("-p", "--add-repo", type=str, action=FullPathAction,  
                         help=("With this option you can provide external RPM repositories to the"
                               " buildroots of the module build. Can be used multiple times."))
 
@@ -80,10 +108,10 @@ def main():
         mmd = load_modulemd_file_from_path(args.modulemd)
         version = generate_module_stream_version()
 
-    if args.git_branch:
-        # TODO the git branch checkout does not work
-        mmd = load_modulemd_file_from_scm(args.git_branch)
-        version = generate_module_stream_version(args.git_branch)
+    #if args.git_branch:
+    # TODO the git branch checkout does is not implemented
+    #    mmd = load_modulemd_file_from_scm(args.git_branch)
+    #   version = generate_module_stream_version(args.git_branch)
 
     if args.module_name:
         mmd.set_module_name(args.module_name)
@@ -113,17 +141,31 @@ def main():
     mock_builder = MockBuilder(args.mock_cfg, args.workdir, args.add_repo, args.rootdir)
 
 # PHASE3: try to build the module stream
-    #try:
-    mock_builder.build(module_stream, args.resume)
-    #except Exception as e:
-        # TODO enable this with the --debug option
-    #    if args.debug:
-    #        import pdb; pdb.set_trace()
-    #    else:
-    #        # TODO reraise and display the original exception
-    #        pass
+    try:
+        mock_builder.build(module_stream, args.resume)
+    except Exception as e:
+        formated_tb = traceback.format_exc()
+        exc_info = sys.exc_info()
+
+        if args.debug:
+            print(formated_tb)
+            msg = ("The program is now in debug mode after encountering an exception."
+                   " When encountering an error the `pdb` python debugger is"
+                   " started. See the following variables to check the state of the build:\n\n"
+                   "`formated_tb` - formated traceback of the exception\n"
+                   "`exc_info` - tuple with the exception information\n"
+                   "`module_stream` - object of module stream metadata loaded from your "
+                   "modulemd file\n"
+                   "`mock_builder` - object which holds the state of your module build\n\n")
+            logger.info(msg)
+
+            pdb.set_trace()
+        else:
+            print(formated_tb)
+            raise exc_info[1]
 
 # PHASE4: Make a final report on the module stream build
+    # TODO implement final_report
     mock_builder.final_report()
 
 if __name__ == "__main__":

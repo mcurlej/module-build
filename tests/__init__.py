@@ -1,7 +1,12 @@
 import os
+import shutil
 from unittest.mock import patch
 
 from module_build.metadata import load_modulemd_file_from_path, generate_module_stream_version
+
+
+class TestException(Exception):
+    pass
 
 
 def get_full_data_path(path):
