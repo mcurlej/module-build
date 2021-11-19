@@ -6,26 +6,36 @@ import pytest
 from module_build.builders.mock_builder import MockBuilder
 from module_build.stream import ModuleStream
 from module_build.metadata import load_modulemd_file_from_path
-from tests import mock_mmdv3_and_version
+from tests import mock_mmdv3_and_version, get_full_data_path
 
 
 def test_create_mock_builder(tmpdir):
     """ Test for an instance of MockBuilder. This serves as a sanity test. """
     cwd = tmpdir.mkdir("workdir")
-    builder = MockBuilder("", cwd)
+    rootdir = cwd + "/rootdir"
+    mock_cfg_path = "/etc/mock/fedora-35-x86_64.cfg"
+    external_repos = ["/repo1", "/repo2"]
+
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
 
     expected_states = ["init", "building", "failed", "finished"]
 
     assert builder.workdir == str(cwd)
     assert builder.states == expected_states
-    assert not builder.mock_cfg_path
+    assert builder.mock_cfg_path == mock_cfg_path
+    assert builder.external_repos == external_repos
+    assert builder.rootdir == rootdir
 
 
 def test_generate_buildbatches(tmpdir):
-    """ Test the generation of build batches for the build process of a module. This serves as a 
+    """ Test the generation of build batches for the build process of a module. This serves as a
     sanity test. """
     cwd = tmpdir.mkdir("workdir")
-    builder = MockBuilder("", cwd)
+    rootdir = None
+    mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
+    external_repos = []
+
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
 
     mmd, version = mock_mmdv3_and_version()
 
@@ -57,7 +67,11 @@ def test_generate_buildbatches(tmpdir):
 def test_generate_buildbatches_with_empty_buildorder_property(tmpdir):
     """ Test the generation of build batches when some components are missing buildorders """
     cwd = tmpdir.mkdir("workdir")
-    builder = MockBuilder("", cwd)
+    rootdir = None
+    mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
+    external_repos = []
+
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
 
     mmd, version = mock_mmdv3_and_version("modulemd/perl-bootstrap-miss-buildorder.yaml")
 
@@ -80,12 +94,14 @@ def test_generate_buildbatches_with_empty_buildorder_property(tmpdir):
         assert c["name"] in expected_comps
 
 
-
-
 def test_generate_buildbatches_with_no_buildorder(tmpdir):
     """ Test the generation of build batches when there is no buildorder set """
     cwd = tmpdir.mkdir("workdir")
-    builder = MockBuilder("", cwd)
+    rootdir = None
+    mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
+    external_repos = []
+
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
 
     mmd, version = mock_mmdv3_and_version("modulemd/perl-bootstrap-no-buildorder.yaml")
 
@@ -100,12 +116,18 @@ def test_generate_buildbatches_with_no_buildorder(tmpdir):
     assert expected_num_comps == len(build_batches[0]["components"])
 
 
-def test_create_build_contexts(tmpdir):
-    """ Test for creation and initialization of the metadata which will keep track and the state of 
+@patch("module_build.builders.mock_builder.mockbuild.config.load_config",
+       return_value={"target_arch": "x86_64", "dist": "fc26"})
+def test_create_build_contexts(mock_config, tmpdir):
+    """ Test for creation and initialization of the metadata which will keep track and the state of
     build process for each context defined in a module stream. This serves as a sanity test.
     """
     cwd = tmpdir.mkdir("workdir")
-    builder = MockBuilder("", cwd)
+    rootdir = None
+    mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
+    external_repos = []
+
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
 
     mmd, version = mock_mmdv3_and_version()
 
@@ -125,8 +147,8 @@ def test_create_build_contexts(tmpdir):
         "perl-bootstrap:devel:20210925131649:f27devel",
     ]
     expected_rpm_suffixes = [
-        ".module_f26+f26devel",
-        ".module_f27+f27devel",
+        ".module_fc26+f26devel",
+        ".module_fc26+f27devel",
     ]
     for c, bc in builder.build_contexts.items():
         assert "name" in bc
@@ -144,23 +166,30 @@ def test_create_build_contexts(tmpdir):
         assert "build_batches" in bc
         assert len(bc["build_batches"]) == 12
         assert "modularity_label" in bc
+        assert bc["modularity_label"] in expected_modularity_label
         assert "rpm_macros" in bc
         assert "modular_deps" in bc
         assert "rpm_suffix" in bc
         assert bc["rpm_suffix"] in expected_rpm_suffixes
 
 
-def test_create_build_context_dir(tmpdir):
+@patch("module_build.builders.mock_builder.mockbuild.config.load_config",
+       return_value={"target_arch": "x86_64", "dist": "fc35"})
+def test_create_build_context_dir(mock_config, tmpdir):
     """ Test for the creating a `context` dir inside our working directory """
     cwd = tmpdir.mkdir("workdir")
-    builder = MockBuilder("", cwd)
+    rootdir = None
+    mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
+    external_repos = []
+
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
 
     mmd, version = mock_mmdv3_and_version()
 
     module_stream = ModuleStream(mmd, version)
 
     context_names = [c.context_name for c in module_stream.contexts]
-    
+
     builder.create_build_contexts(module_stream)
 
     expected_dir_names = [context.get_NSVCA() for context in module_stream.contexts]
@@ -177,7 +206,11 @@ def test_create_build_context_dir_raises_no_build_context_metadata(tmpdir):
     initialized correctly.
     """
     cwd = tmpdir.mkdir("workdir")
-    builder = MockBuilder("", cwd)
+    rootdir = None
+    mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
+    external_repos = []
+
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
 
     mmd, version = mock_mmdv3_and_version()
 
@@ -187,17 +220,23 @@ def test_create_build_context_dir_raises_no_build_context_metadata(tmpdir):
         builder.create_build_context_dir(module_stream.contexts[0].name)
 
 
-def test_create_build_batch_dir(tmpdir):
+@patch("module_build.builders.mock_builder.mockbuild.config.load_config",
+       return_value={"target_arch": "x86_64", "dist": "fc35"})
+def test_create_build_batch_dir(mock_config, tmpdir):
     """ Test for the creating a `build_batches` and `batch` directory """
     cwd = tmpdir.mkdir("workdir")
-    builder = MockBuilder("", cwd)
+    rootdir = None
+    mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
+    external_repos = []
+
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
 
     mmd, version = mock_mmdv3_and_version()
 
     module_stream = ModuleStream(mmd, version)
 
     context_names = [c.context_name for c in module_stream.contexts]
-    
+
     builder.create_build_contexts(module_stream)
 
     builder.create_build_batch_dir(context_names[0], 0)
@@ -215,7 +254,11 @@ def test_create_build_batch_dir_raises_no_build_context_metadata(tmpdir):
     initialized correctly.
     """
     cwd = tmpdir.mkdir("workdir")
-    builder = MockBuilder("", cwd)
+    rootdir = None
+    mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
+    external_repos = []
+
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
 
     mmd, version = mock_mmdv3_and_version()
 
@@ -226,14 +269,14 @@ def test_create_build_batch_dir_raises_no_build_context_metadata(tmpdir):
 
 
 def fake_buildroot_run(self):
-    """ Fake function which creates dummy rpm file in the result directory of a component. The 
-    NEVRA of the RPM is fake. The only real parts are the name and the modular rpm suffix which 
+    """ Fake function which creates dummy rpm file in the result directory of a component. The
+    NEVRA of the RPM is fake. The only real parts are the name and the modular rpm suffix which
     in real life overrides the %{dist} macro. The function represents a succesfull build in the
     mock buildroot """
 
     # TODO move to __init__.py
     rpm_filename = "/{name}-0:1.0-1{dist}.x86_64.rpm".format(name=self.component["name"],
-                                                    dist=self.rpm_suffix)
+                                                             dist=self.rpm_suffix)
 
     with open(self.result_dir_path + rpm_filename, "w") as f:
         f.write("dummy")
@@ -243,40 +286,57 @@ def fake_buildroot_run(self):
     return "", 0
 
 
+def fake_get_artifacts(self, artifacts):
+    artifacts_nevra = []
+    for a in artifacts:
+        path, filename = a.rsplit("/", 1)
+        filename = filename.rsplit(".", 1)[0]
+        artifacts_nevra.append(filename)
+
+    return artifacts_nevra
+
+
 def assert_modular_dependencies(modular_deps, expected_modular_deps):
     # TODO move to __init__.py
     runtime_modules = modular_deps.get_runtime_modules()
 
     for module in runtime_modules:
         streams = modular_deps.get_runtime_streams(module)
-        
+
         for stream in streams:
             module_stream = "{module}:{stream}".format(module=module, stream=stream)
             assert module_stream in expected_modular_deps
 
     buildtime_modules = modular_deps.get_buildtime_modules()
-        
+
     for module in buildtime_modules:
         streams = modular_deps.get_buildtime_streams(module)
-        
+
         for stream in streams:
             module_stream = "{module}:{stream}".format(module=module, stream=stream)
             assert module_stream in expected_modular_deps
 
 
-def test_build_perl_bootstrap(tmpdir):
+@patch("module_build.builders.mock_builder.MockBuilder.get_artifacts_nevra", new=fake_get_artifacts)
+@patch("module_build.builders.mock_builder.mockbuild.config.load_config",
+       return_value={"target_arch": "x86_64", "dist": "fc35"})
+def test_build_perl_bootstrap(mock_config, tmpdir):
     """ This is a sanity test for the build process. We are testing here if everything is created
     as expected. We will use `fake_buildroot_run` to fake the actual build in a mock buildroot. """
 
     cwd = tmpdir.mkdir("workdir")
-    builder = MockBuilder("/etc/mock/fedora-34-x86_64.cfg", cwd)
+    rootdir = None
+    mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
+    external_repos = []
+
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
 
     mmd, version = mock_mmdv3_and_version()
 
     module_stream = ModuleStream(mmd, version)
 
     with patch("module_build.builders.mock_builder.MockBuildroot.run", new=fake_buildroot_run):
-        builder.build(module_stream)
+        builder.build(module_stream, resume=False)
 
     expected_platform = {
         "f26devel": "platform:f26",
@@ -306,7 +366,7 @@ def test_build_perl_bootstrap(tmpdir):
             # be a modular dependency for
             if i != 12:
                 # if the batch yaml file has been correctly created for the current batch
-                batch_yaml_name_stream = "batch:{num}".format(num=i)
+                batch_yaml_name_stream = "batch{num}:{num}".format(num=i)
                 batch_yaml_context = "b{num}".format(num=i)
                 batch_yaml_file = [f for f in os.listdir(b["dir"]) if f.endswith("yaml")][0]
                 assert batch_yaml_name_stream in batch_yaml_file

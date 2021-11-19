@@ -1,5 +1,4 @@
 import os
-import subprocess
 from collections import namedtuple
 from unittest.mock import patch
 
@@ -7,6 +6,7 @@ import pytest
 
 from module_build.cli import main, get_arg_parser
 from tests import get_full_data_path, TestException
+
 
 def fake_raise_exception(self):
     raise TestException("Fake Exception Yay!")
@@ -17,7 +17,7 @@ def fake_raise_exception(self):
 @patch("module_build.builders.mock_builder.MockBuildroot.run", new=fake_raise_exception)
 def test_debug_option(mock_config, tmpdir):
     """
-    We test if the cli will call the debugger after encountering an exception when the 
+    We test if the cli will call the debugger after encountering an exception when the
     `--debug` option is set.
     """
     cwd = tmpdir.mkdir("workdir")
@@ -39,7 +39,6 @@ def test_debug_option(mock_config, tmpdir):
                 rootdir=None,
                 add_repo=[])
 
-
     with patch("module_build.cli.get_arg_parser") as mock_parser:
         mock_parser.return_value.parse_args.return_value = args
 
@@ -47,7 +46,6 @@ def test_debug_option(mock_config, tmpdir):
             main()
             mock_pdb.set_trace.assert_called_once()
 
-        
 
 @patch("module_build.builders.mock_builder.mockbuild.config.load_config",
        return_value={"target_arch": "x86_64", "dist": "fc35"})
@@ -75,28 +73,26 @@ def test_reraise_exception(mock_config, tmpdir):
                 rootdir=None,
                 add_repo=[])
 
-
     with patch("module_build.cli.get_arg_parser") as mock_parser:
         mock_parser.return_value.parse_args.return_value = args
 
         with pytest.raises(TestException) as e:
             main()
-            
+
     assert type(e.type()) is TestException
     assert "Fake Exception Yay!" in e.exconly()
 
 
 def test_convert_relative_paths_to_absolute():
-    """ 
-    We test that all relative paths provided to the script will be converted to absolute paths. 
+    """
+    We test that all relative paths provided to the script will be converted to absolute paths.
     """
 
     dir_path = os.getcwd()
     parser = get_arg_parser()
-    input_args = ["-f", "./relative/path", "-c" "./relative/path", "--add-repo", 
-    "/not/relative/path", "--add-repo", "./relative/path", "."]
+    input_args = ["-f", "./relative/path", "-c" "./relative/path", "--add-repo",
+                  "/not/relative/path", "--add-repo", "./relative/path", "."]
     args = parser.parse_args(input_args)
-
 
     assert args.modulemd == dir_path + "/relative/path"
     assert args.mock_cfg == dir_path + "/relative/path"
@@ -105,6 +101,3 @@ def test_convert_relative_paths_to_absolute():
     for p in args.add_repo:
         assert p in expected_paths
     assert args.workdir == dir_path
-
-
-

@@ -6,7 +6,7 @@ import traceback
 
 from module_build.builders.mock_builder import MockBuilder
 from module_build.log import init_logging, logger
-from module_build.metadata import (load_modulemd_file_from_path, load_modulemd_file_from_scm,
+from module_build.metadata import (load_modulemd_file_from_path,
                                    generate_module_stream_version)
 from module_build.stream import ModuleStream
 
@@ -50,7 +50,7 @@ def get_arg_parser():
     group.add_argument("-f", "--modulemd", type=str, action=FullPathAction,
                        help="Path to the modulemd yaml file")
 
-    #group.add_argument("-g", "--git-branch", type=str,
+    # group.add_argument("-g", "--git-branch", type=str,
     #                   help=("URL to the git branch where the modulemd yaml file resides."))
 
     parser.add_argument("-c", "--mock-cfg", help="Path to the mock config.",
@@ -74,13 +74,13 @@ def get_arg_parser():
                               " also required when using the resume feature. You can specify which "
                               "module stream version you want to resume."))
     # TODO verbose is not implemented
-    #parser.add_argument("-v", "--verbose", action="store_true",
-    #                    help="Will display all output to stdout.")
+    # parser.add_argument("-v", "--verbose", action="store_true",
+    #                     help="Will display all output to stdout.")
 
     parser.add_argument("-d", "--debug", action="store_true",
                         help="When the module build fails it will start the python `pdb` debugger.")
     parser.set_defaults(add_repo=[])
-    parser.add_argument("-p", "--add-repo", type=str, action=FullPathAction,  
+    parser.add_argument("-p", "--add-repo", type=str, action=FullPathAction,
                         help=("With this option you can provide external RPM repositories to the"
                               " buildroots of the module build. Can be used multiple times."))
 
@@ -108,7 +108,7 @@ def main():
         mmd = load_modulemd_file_from_path(args.modulemd)
         version = generate_module_stream_version()
 
-    #if args.git_branch:
+    # if args.git_branch:
     # TODO the git branch checkout does is not implemented
     #    mmd = load_modulemd_file_from_scm(args.git_branch)
     #   version = generate_module_stream_version(args.git_branch)
@@ -118,7 +118,7 @@ def main():
 
     if args.module_stream:
         mmd.set_stream_name(args.module_stream)
-    
+
     if args.module_version:
         version = args.module_version
 
@@ -136,14 +136,14 @@ def main():
     )
     logger.info(log_msg)
 
-    # TODO convert all relative paths to absolute 
+    # TODO convert all relative paths to absolute
     # TODO add exceptions
     mock_builder = MockBuilder(args.mock_cfg, args.workdir, args.add_repo, args.rootdir)
 
 # PHASE3: try to build the module stream
     try:
         mock_builder.build(module_stream, args.resume)
-    except Exception as e:
+    except Exception:
         formated_tb = traceback.format_exc()
         exc_info = sys.exc_info()
 
@@ -167,6 +167,7 @@ def main():
 # PHASE4: Make a final report on the module stream build
     # TODO implement final_report
     mock_builder.final_report()
+
 
 if __name__ == "__main__":
     main()

@@ -1,5 +1,6 @@
 from module_build.modulemd import Modulemd
 
+
 class ModuleStream:
 
     def __init__(self, mmd, version):
@@ -142,8 +143,8 @@ class ModuleStreamContext:
 
     def get_modularity_label(self):
         return "{name}:{stream}:{version}:{context}".format(name=self.module_name,
-                                                            stream=self.stream, 
-                                                            version=self.version, 
+                                                            stream=self.stream,
+                                                            version=self.version,
                                                             context=self.context_name)
 
     def get_rpm_suffix(self, dist=None):
@@ -151,4 +152,4 @@ class ModuleStreamContext:
             dist = self.platform
 
         return ".module_{dist}+{context}".format(dist=dist,
-                                                     context=self.context_name)
+                                                 context=self.context_name)

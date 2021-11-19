@@ -1,7 +1,7 @@
 import pytest
 
 from module_build.stream import ModuleStream, ModuleStreamContext
-from tests import get_full_data_path, mock_mmdv3_and_version
+from tests import mock_mmdv3_and_version
 
 
 def test_create_module_steam():
