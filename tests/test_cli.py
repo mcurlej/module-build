@@ -5,6 +5,7 @@ from unittest.mock import patch
 import pytest
 
 from module_build.cli import main, get_arg_parser
+from module_build.stream import ModuleStream
 from tests import get_full_data_path, TestException
 
 
@@ -26,7 +27,7 @@ def test_debug_option(mock_config, tmpdir):
 
     Args = namedtuple("Args", ["modulemd", "mock_cfg", "debug", "workdir", "resume",
                                "module_name", "module_stream", "module_version",
-                               "add_repo", "rootdir"])
+                               "add_repo", "rootdir", "module_context"])
 
     args = Args(modulemd=full_path,
                 mock_cfg="/etc/mock/fedora-35-x86_64.cfg",
@@ -37,7 +38,8 @@ def test_debug_option(mock_config, tmpdir):
                 module_stream="devel",
                 module_version=None,
                 rootdir=None,
-                add_repo=[])
+                add_repo=[],
+                module_context=None)
 
     with patch("module_build.cli.get_arg_parser") as mock_parser:
         mock_parser.return_value.parse_args.return_value = args
@@ -60,7 +62,7 @@ def test_reraise_exception(mock_config, tmpdir):
 
     Args = namedtuple("Args", ["modulemd", "mock_cfg", "debug", "workdir", "resume",
                                "module_name", "module_stream", "module_version",
-                               "add_repo", "rootdir"])
+                               "add_repo", "rootdir", "module_context"])
 
     args = Args(modulemd=full_path,
                 mock_cfg="/etc/mock/fedora-35-x86_64.cfg",
@@ -71,7 +73,8 @@ def test_reraise_exception(mock_config, tmpdir):
                 module_stream="devel",
                 module_version=None,
                 rootdir=None,
-                add_repo=[])
+                add_repo=[],
+                module_context=None)
 
     with patch("module_build.cli.get_arg_parser") as mock_parser:
         mock_parser.return_value.parse_args.return_value = args
@@ -101,3 +104,44 @@ def test_convert_relative_paths_to_absolute():
     for p in args.add_repo:
         assert p in expected_paths
     assert args.workdir == dir_path
+
+
+def test_choose_context_to_build(tmpdir):
+    """
+    We test that the builder is called with a specific context
+    """
+    cwd = tmpdir.mkdir("workdir")
+
+    full_path = get_full_data_path("modulemd/perl-bootstrap.yaml")
+
+    Args = namedtuple("Args", ["modulemd", "mock_cfg", "debug", "workdir", "resume",
+                               "module_name", "module_stream", "module_version",
+                               "add_repo", "rootdir", "module_context"])
+
+    context_to_build = "f26devel"
+
+    args = Args(modulemd=full_path,
+                mock_cfg="/etc/mock/fedora-35-x86_64.cfg",
+                debug=False,
+                workdir=cwd,
+                resume=False,
+                module_name="flatpak-runtime",
+                module_stream="devel",
+                module_version=None,
+                rootdir=None,
+                add_repo=[],
+                module_context=context_to_build)
+
+    with patch("module_build.cli.get_arg_parser") as mock_parser:
+        mock_parser.return_value.parse_args.return_value = args
+
+        with patch("module_build.builders.mock_builder.MockBuilder.build") as mock_build:
+            main()
+
+    required_args = mock_build.call_args[0]
+    optional_args = mock_build.call_args[1]
+
+    assert type(required_args[0]) is ModuleStream
+    assert not required_args[1]
+    assert "context_to_build" in optional_args
+    assert optional_args["context_to_build"] == context_to_build

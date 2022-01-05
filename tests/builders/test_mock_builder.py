@@ -6,7 +6,8 @@ import pytest
 from module_build.builders.mock_builder import MockBuilder
 from module_build.stream import ModuleStream
 from module_build.metadata import load_modulemd_file_from_path
-from tests import mock_mmdv3_and_version, get_full_data_path
+from tests import (mock_mmdv3_and_version, get_full_data_path, fake_get_artifacts,
+                   assert_modular_dependencies, fake_buildroot_run)
 
 
 def test_create_mock_builder(tmpdir):
@@ -268,55 +269,6 @@ def test_create_build_batch_dir_raises_no_build_context_metadata(tmpdir):
         builder.create_build_batch_dir(module_stream.contexts[0].name, 0)
 
 
-def fake_buildroot_run(self):
-    """ Fake function which creates dummy rpm file in the result directory of a component. The
-    NEVRA of the RPM is fake. The only real parts are the name and the modular rpm suffix which
-    in real life overrides the %{dist} macro. The function represents a succesfull build in the
-    mock buildroot """
-
-    # TODO move to __init__.py
-    rpm_filename = "/{name}-0:1.0-1{dist}.x86_64.rpm".format(name=self.component["name"],
-                                                             dist=self.rpm_suffix)
-
-    with open(self.result_dir_path + rpm_filename, "w") as f:
-        f.write("dummy")
-
-    self.finished = True
-
-    return "", 0
-
-
-def fake_get_artifacts(self, artifacts):
-    artifacts_nevra = []
-    for a in artifacts:
-        path, filename = a.rsplit("/", 1)
-        filename = filename.rsplit(".", 1)[0]
-        artifacts_nevra.append(filename)
-
-    return artifacts_nevra
-
-
-def assert_modular_dependencies(modular_deps, expected_modular_deps):
-    # TODO move to __init__.py
-    runtime_modules = modular_deps.get_runtime_modules()
-
-    for module in runtime_modules:
-        streams = modular_deps.get_runtime_streams(module)
-
-        for stream in streams:
-            module_stream = "{module}:{stream}".format(module=module, stream=stream)
-            assert module_stream in expected_modular_deps
-
-    buildtime_modules = modular_deps.get_buildtime_modules()
-
-    for module in buildtime_modules:
-        streams = modular_deps.get_buildtime_streams(module)
-
-        for stream in streams:
-            module_stream = "{module}:{stream}".format(module=module, stream=stream)
-            assert module_stream in expected_modular_deps
-
-
 @patch("module_build.builders.mock_builder.MockBuilder.get_artifacts_nevra", new=fake_get_artifacts)
 @patch("module_build.builders.mock_builder.mockbuild.config.load_config",
        return_value={"target_arch": "x86_64", "dist": "fc35"})
@@ -391,7 +343,7 @@ def test_build_perl_bootstrap(mock_config, tmpdir):
             finished_builds_count += len(b["finished_builds"])
         # compare if we have the same number of RPMs in the final repo as we have in their
         # respective buid batches. This is only a sanity test. Right now 1 component produces 1
-        # RPM file for the sake of the test, in reallity one component can produce multiple RPMs.
+        # RPM file for the sake of the test, in reality one component can produce multiple RPMs.
         final_rpm_count = len([f for f in os.listdir(c["final_repo_path"]) if f.endswith("rpm")])
         assert finished_builds_count == final_rpm_count
 
@@ -404,17 +356,69 @@ def test_build_perl_bootstrap(mock_config, tmpdir):
         assert_modular_dependencies(modular_deps, expected_modular_deps)
 
 
-def test_resume_module_build_failed_first_component():
-    pass
+@patch("module_build.builders.mock_builder.MockBuilder.get_artifacts_nevra", new=fake_get_artifacts)
+@patch("module_build.builders.mock_builder.mockbuild.config.load_config",
+       return_value={"target_arch": "x86_64", "dist": "fc35"})
+def test_build_specific_context(mock_config, tmpdir):
+
+    cwd = tmpdir.mkdir("workdir")
+    rootdir = None
+    mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
+    external_repos = []
+
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
+
+    mmd, version = mock_mmdv3_and_version()
+
+    module_stream = ModuleStream(mmd, version)
+
+    context_to_build = "f26devel"
+
+    with patch("module_build.builders.mock_builder.MockBuildroot.run", new=fake_buildroot_run):
+        builder.build(module_stream, resume=False, context_to_build=context_to_build)
+
+    context_dirs = os.listdir(cwd)
+    assert len(context_dirs) == 1
+    assert context_dirs[0] == "perl-bootstrap:devel:20210925131649:f26devel:x86_64"
+
+    # Metadata provided with the modulemd yaml file are processed whole. The builder has always
+    # information about all contexts. During buildtime it chooses which contexts to build, if
+    # specified by the user. That is why there are existing metadata for the `f27devel` context
+    # even it was not choosen for build.
+    # The `f27devel` context only contains metadata provided from the modulemd file. The `f26devel`
+    # context contains also extra metadata added by the build process.
+    f27devel_keys = builder.build_contexts["f27devel"].keys()
+
+    missing_keys = ['dir', 'final_repo_path', 'final_yaml_path']
+
+    for k in missing_keys:
+        assert k not in f27devel_keys
 
 
-def test_resume_module_build_failed_not_first_component():
-    pass
+@patch("module_build.builders.mock_builder.mockbuild.config.load_config",
+       return_value={"target_arch": "x86_64", "dist": "fc35"})
+def test_build_invalid_context(mock_config, tmpdir):
+    """
+    We test to raise an exception when the choosen context does not exist in the provided module
+    stream.
+    """
 
+    cwd = tmpdir.mkdir("workdir")
+    rootdir = None
+    mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
+    external_repos = []
 
-def test_resume_module_build_failed_to_create_batch_yaml_file():
-    pass
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
 
+    mmd, version = mock_mmdv3_and_version()
 
-def test_resume_module_build_failed_to_create_final_yaml_file():
-    pass
+    module_stream = ModuleStream(mmd, version)
+
+    invalid_context_to_build = "invalid_context"
+
+    with pytest.raises(Exception) as e:
+        builder.build(module_stream, resume=False, context_to_build=invalid_context_to_build)
+
+    err_msg = e.value.args[0]
+    assert "does not exist" in err_msg
+    assert "invalid_context" in err_msg

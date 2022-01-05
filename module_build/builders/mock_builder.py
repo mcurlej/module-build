@@ -22,11 +22,16 @@ class MockBuilder:
         self.external_repos = external_repos
         self.rootdir = rootdir
 
-    def build(self, module_stream, resume):
+    def build(self, module_stream, resume, context_to_build=None):
         # first we must process the metadata provided by the module stream
         # components need to be organized to `build_batches`
         logger.info("Processing buildorder of the module stream.")
         self.create_build_contexts(module_stream)
+
+        if context_to_build:
+            if context_to_build not in self.build_contexts:
+                raise Exception("The '{context}' does not exists in this module stream!".format(
+                    context=context_to_build))
 
         if resume:
             msg = "------------- Resuming Module Build --------------"
@@ -35,6 +40,11 @@ class MockBuilder:
 
         # when the metadata processing is done, we can ge to the building of the defined `contexts`
         for context_name, build_context in self.build_contexts.items():
+            # check if there is a specified context to be build and if the current context is the
+            # specified context to be build. If not skip.
+            if context_to_build and context_to_build != context_name:
+                continue
+
             if build_context["status"]["state"] == self.states[3] and resume:
                 msg = "The build context '{context}' state is set to '{state}'. Skipping...".format(
                     context=context_name,
@@ -206,7 +216,7 @@ class MockBuilder:
 
             msg_batch += """
             batch number (buildorder): {order}
-            components count: {count}
+            component count: {count}
             modular batch dependencies:
             {deps}
             components:
@@ -216,7 +226,7 @@ class MockBuilder:
                                             deps=build_batches[order]["modular_batch_deps"])
         logger.info(msg_batch)
 
-        msg = "Total build batches count: {num}".format(num=len(sorted_build_batches))
+        msg = "Total build batch count: {num}".format(num=len(sorted_build_batches))
         logger.info(msg)
 
         return build_batches

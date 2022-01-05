@@ -15,7 +15,7 @@ class FullPathAction(argparse.Action):
     """ A custom argparse action which converts all relative paths to absolute. """
     def __call__(self, parser, args, values, option_string=None):
         full_path = self._get_full_path(values)
-        # `add_repo` should be a `append` action
+        # `add_repo` should be an `append` action
         if self.dest == "add_repo":
             add_repo = getattr(args, "add_repo")
             add_repo.append(full_path)
@@ -73,6 +73,10 @@ def get_arg_parser():
                               " set the current unix timestamp will be used instead. This option is"
                               " also required when using the resume feature. You can specify which "
                               "module stream version you want to resume."))
+
+    parser.add_argument("-x", "--module-context", type=str,
+                        help=("When set it will only build the selected context from the modules"
+                              " stream."))
     # TODO verbose is not implemented
     # parser.add_argument("-v", "--verbose", action="store_true",
     #                     help="Will display all output to stdout.")
@@ -109,7 +113,7 @@ def main():
         version = generate_module_stream_version()
 
     # if args.git_branch:
-    # TODO the git branch checkout does is not implemented
+    # TODO the git branch checkout is not implemented
     #    mmd = load_modulemd_file_from_scm(args.git_branch)
     #   version = generate_module_stream_version(args.git_branch)
 
@@ -130,19 +134,26 @@ def main():
         raise Exception("no input")
 
 # PHASE2: init the builder
-    log_msg = "Starting to build the '{name}:{stream}' module stream.".format(
-        name=module_stream.name,
-        stream=module_stream.stream,
-    )
+    if args.module_context:
+        log_msg = "Starting to build the '{name}:{stream}:{context}' of the module stream.".format(
+            name=module_stream.name,
+            stream=module_stream.stream,
+            context=args.module_context
+        )
+    else:
+        log_msg = "Starting to build the '{name}:{stream}' module stream.".format(
+            name=module_stream.name,
+            stream=module_stream.stream,
+        )
+
     logger.info(log_msg)
 
-    # TODO convert all relative paths to absolute
     # TODO add exceptions
     mock_builder = MockBuilder(args.mock_cfg, args.workdir, args.add_repo, args.rootdir)
 
 # PHASE3: try to build the module stream
     try:
-        mock_builder.build(module_stream, args.resume)
+        mock_builder.build(module_stream, args.resume, context_to_build=args.module_context)
     except Exception:
         formated_tb = traceback.format_exc()
         exc_info = sys.exc_info()
