@@ -29,16 +29,30 @@ def mock_mmdv3_and_version(modulemd_path="modulemd/perl-bootstrap.yaml",
     return mmd, version
 
 
-def fake_buildroot_run(self):
+def fake_buildroot_run(self, component_to_fail=None, context=None):
     """ Fake function which creates dummy rpm file in the result directory of a component. The
     NEVRA of the RPM is fake. The only real parts are the name and the modular rpm suffix which
     in real life overrides the %{dist} macro. The function represents a succesfull build in the
     mock buildroot """
+    if component_to_fail == self.component["name"] and not context:
+        msg = "Build of component '{component}' failed!!".format(
+            component=self.component["name"])
+        raise Exception(msg)
+
+    if (context and self.modularity_label.endswith(context)
+            and component_to_fail == self.component["name"]):
+        msg = "Build of component '{component}' of context '{context}' failed!!".format(
+            component=self.component["name"],
+            context=context)
+        raise Exception(msg)
 
     rpm_filename = "/{name}-0:1.0-1{dist}.x86_64.rpm".format(name=self.component["name"],
                                                              dist=self.rpm_suffix)
 
     with open(self.result_dir_path + rpm_filename, "w") as f:
+        f.write("dummy")
+
+    with open(self.result_dir_path + "/finished", "w") as f:
         f.write("dummy")
 
     self.finished = True

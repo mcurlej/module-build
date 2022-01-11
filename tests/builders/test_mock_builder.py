@@ -12,7 +12,7 @@ from tests import (mock_mmdv3_and_version, get_full_data_path, fake_get_artifact
 
 def test_create_mock_builder(tmpdir):
     """ Test for an instance of MockBuilder. This serves as a sanity test. """
-    cwd = tmpdir.mkdir("workdir")
+    cwd = tmpdir.mkdir("workdir").strpath
     rootdir = cwd + "/rootdir"
     mock_cfg_path = "/etc/mock/fedora-35-x86_64.cfg"
     external_repos = ["/repo1", "/repo2"]
@@ -31,7 +31,7 @@ def test_create_mock_builder(tmpdir):
 def test_generate_buildbatches(tmpdir):
     """ Test the generation of build batches for the build process of a module. This serves as a
     sanity test. """
-    cwd = tmpdir.mkdir("workdir")
+    cwd = tmpdir.mkdir("workdir").strpath
     rootdir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []
@@ -67,7 +67,7 @@ def test_generate_buildbatches(tmpdir):
 
 def test_generate_buildbatches_with_empty_buildorder_property(tmpdir):
     """ Test the generation of build batches when some components are missing buildorders """
-    cwd = tmpdir.mkdir("workdir")
+    cwd = tmpdir.mkdir("workdir").strpath
     rootdir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []
@@ -97,7 +97,7 @@ def test_generate_buildbatches_with_empty_buildorder_property(tmpdir):
 
 def test_generate_buildbatches_with_no_buildorder(tmpdir):
     """ Test the generation of build batches when there is no buildorder set """
-    cwd = tmpdir.mkdir("workdir")
+    cwd = tmpdir.mkdir("workdir").strpath
     rootdir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []
@@ -123,7 +123,7 @@ def test_create_build_contexts(mock_config, tmpdir):
     """ Test for creation and initialization of the metadata which will keep track and the state of
     build process for each context defined in a module stream. This serves as a sanity test.
     """
-    cwd = tmpdir.mkdir("workdir")
+    cwd = tmpdir.mkdir("workdir").strpath
     rootdir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []
@@ -178,7 +178,7 @@ def test_create_build_contexts(mock_config, tmpdir):
        return_value={"target_arch": "x86_64", "dist": "fc35"})
 def test_create_build_context_dir(mock_config, tmpdir):
     """ Test for the creating a `context` dir inside our working directory """
-    cwd = tmpdir.mkdir("workdir")
+    cwd = tmpdir.mkdir("workdir").strpath
     rootdir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []
@@ -198,15 +198,15 @@ def test_create_build_context_dir(mock_config, tmpdir):
     for name in context_names:
         builder.create_build_context_dir(name)
 
-    for directory in cwd.listdir():
-        assert directory.basename in expected_dir_names
+    for name in expected_dir_names:
+        assert name in os.listdir(cwd)
 
 
 def test_create_build_context_dir_raises_no_build_context_metadata(tmpdir):
     """ Test the builder to raise when creating a `context` directory when the builder was not
     initialized correctly.
     """
-    cwd = tmpdir.mkdir("workdir")
+    cwd = tmpdir.mkdir("workdir").strpath
     rootdir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []
@@ -225,7 +225,7 @@ def test_create_build_context_dir_raises_no_build_context_metadata(tmpdir):
        return_value={"target_arch": "x86_64", "dist": "fc35"})
 def test_create_build_batch_dir(mock_config, tmpdir):
     """ Test for the creating a `build_batches` and `batch` directory """
-    cwd = tmpdir.mkdir("workdir")
+    cwd = tmpdir.mkdir("workdir").strpath
     rootdir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []
@@ -242,12 +242,10 @@ def test_create_build_batch_dir(mock_config, tmpdir):
 
     builder.create_build_batch_dir(context_names[0], 0)
 
-    batch_dir = cwd.listdir()[0].listdir()[0]
+    build_batches_dir = os.listdir(cwd + "/" + os.listdir(cwd)[0] + "/build_batches")
 
-    for directory in batch_dir.listdir():
-        assert "batch_0" == directory.basename
-        expected_path = "perl-bootstrap:devel:20210925131649:f26devel:x86_64/build_batches/batch_0"
-        assert expected_path in str(directory)
+    assert len(build_batches_dir) == 1
+    assert "batch_0" == build_batches_dir[0]
 
 
 def test_create_build_batch_dir_raises_no_build_context_metadata(tmpdir):
@@ -276,7 +274,7 @@ def test_build_perl_bootstrap(mock_config, tmpdir):
     """ This is a sanity test for the build process. We are testing here if everything is created
     as expected. We will use `fake_buildroot_run` to fake the actual build in a mock buildroot. """
 
-    cwd = tmpdir.mkdir("workdir")
+    cwd = tmpdir.mkdir("workdir").strpath
     rootdir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []
@@ -361,7 +359,7 @@ def test_build_perl_bootstrap(mock_config, tmpdir):
        return_value={"target_arch": "x86_64", "dist": "fc35"})
 def test_build_specific_context(mock_config, tmpdir):
 
-    cwd = tmpdir.mkdir("workdir")
+    cwd = tmpdir.mkdir("workdir").strpath
     rootdir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []
@@ -403,7 +401,7 @@ def test_build_invalid_context(mock_config, tmpdir):
     stream.
     """
 
-    cwd = tmpdir.mkdir("workdir")
+    cwd = tmpdir.mkdir("workdir").strpath
     rootdir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []

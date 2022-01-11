@@ -149,7 +149,7 @@ class MockBuilder:
 
                 # when the batch has finished building all its components, we will turn the batch
                 # dir into a module stream. `finalize_batch` will add a modules.yaml file so the dir
-                # and its build rpms can be used in the next batch as modular dependencies
+                # and its built rpms can be used in the /next batch as modular dependencies
                 self.finalize_batch(position, context_name)
 
                 build_context["build_batches"][position]["batch_state"] = self.states[3]
@@ -639,13 +639,10 @@ class MockBuilder:
         for context_name, context in self.build_contexts.items():
             build_batches = context["build_batches"]
 
-            # if the context dir for the next context does not exist. The resume point is the next
-            # context in line, the first batch and the first component of this batch.
+            # if the context dir does not exists the build process did not start yet for that
+            # context
             if context["nsvca"] not in context_dirs:
-                resume_point["context"] = context_name
-                resume_point["batch"] = 0
-                resume_point["component"] = build_batches[0]["components"][0]["name"]
-                break
+                continue
 
             cd_path = self.workdir + "/" + context["nsvca"]
             # we look for the finished filename in the context dir
@@ -877,11 +874,14 @@ class MockBuilder:
                                     resume_point["component"] = next_comp["name"]
                                     break
                     else:
-                        # if the next batch to build is not present between the batch dirs
-                        # the batch and its first component should be set as the resume point.
-                        resume_point["batch"] = position
-                        resume_point["component"] = build_batches[position]["components"][0]["name"]
-                        break
+                        if "batch" not in resume_point:
+                            # if all of the existing batches are finished and the batch resume point
+                            # was not found we set the resume point for the next batch in line and
+                            # its first component
+                            first_component = build_batches[position]["components"][0]
+                            resume_point["batch"] = position
+                            resume_point["component"] = first_component["name"]
+                            break
 
             context["dir"] = cd_path
 
@@ -890,6 +890,7 @@ class MockBuilder:
             # context to resume. When we have a resume point we need to remove final repo because
             # the number of build RPMs can change.
             # TODO put the removing of final repo to its own method
+            context_name = resume_point["context"]
             context_dir_path = self.build_contexts[context_name]["dir"]
             final_repo_path = context_dir_path + "/final_repo"
 
@@ -899,8 +900,6 @@ class MockBuilder:
                 shutil.rmtree(final_repo_path)
 
             if len(resume_point) and len(resume_point) == 1 and "context" in resume_point:
-                context_name = resume_point["context"]
-
                 msg = ("The context '{name}' has finished building all its batches and components."
                        "It seems it was not finalized. Finalizing context...").format(
                            name=context_name)
