@@ -2,11 +2,12 @@
 
 A library and a cli tool for building module streams.
 <br />
+The `module-build` tool only accepts [version 3](https://github.com/fedora-modularity/libmodulemd/blob/main/yaml_specs/modulemd_packager_v3.yaml) of the modulemd-packager yaml file format.
 
 # Installation
 
 ## Development
-Afte cloning the project we have to setup the required dependencies.
+After cloning the project we have to setup the required dependencies.
 
 First we need to fullfill dependencies which are required on system level. This can be done on Fedora 34 and up.
 
@@ -100,6 +101,16 @@ If your modulemd yaml file does not provide module name or module stream it can 
 <br />
 ```
 $ module-build -f flatpak-runtime.yaml -c /etc/mock/fedora-35-x86_64.cfg --module-name=flatpak-runtime --module-stream=devel ./workdir
+```
+<br />
+<br />
+
+If you want to build a specific `context` out your module stream you can define it by `--module-context` 
+parameter: 
+<br />
+<br />
+```
+$ module-build -f flatpak-runtime.yaml -c /etc/mock/fedora-35-x86_64.cfg --module-name=flatpak-runtime --module-stream=devel --module-context=mycontext ./workdir
 ```
 <br />
 <br />

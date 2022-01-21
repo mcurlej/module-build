@@ -1,6 +1,6 @@
 from os import path
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
 
 def read_requirements(filename):
@@ -24,7 +24,7 @@ tests_require, _ = read_requirements(path.join(setup_py_path, "test-requirements
 setup(
     name="module-build",
     description="A library and CLI tool for building module streams.",
-    version="0.0.1",
+    version="0.1.0",
     classifiers=[
         "Programming Language :: Python",
         "Topic :: Software Development :: Build Tools"
@@ -34,7 +34,7 @@ setup(
     author_email="martin.curlej@redhat.com",
     url="https://github.com/mcurlej/module-build",
     license="MIT",
-    packages=find_packages(),
+    packages=["module_build"],
     include_package_data=True,
     zip_safe=False,
     install_requires=install_requires,

@@ -349,12 +349,13 @@ def test_resume_module_build_continue_with_next_context(mock_config, tmpdir):
 
     cntx_names = os.listdir(cwd)
     assert len(cntx_names) == 2
-
-    second_context_path = cwd + "/" + cntx_names[0]
-    shutil.rmtree(second_context_path)
-
-    first_context_path = cwd + "/" + cntx_names[1]
-    first_context_dir = os.listdir(first_context_path)
+    for name in cntx_names:
+        if "f27devel" in name:
+            second_context_path = cwd + "/" + name
+            shutil.rmtree(second_context_path)
+        if "f26devel" in name:
+            first_context_path = cwd + "/" + name
+            first_context_dir = os.listdir(first_context_path)
     assert "finished" in first_context_dir
 
     # we run the build again on the same working directory with the resume option on
