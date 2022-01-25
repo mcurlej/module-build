@@ -44,13 +44,12 @@ A library and a cli tool for building module streams.
 %doc README.md
 %license LICENSE
 %{python3_sitelib}/module_build
-%{python3_sitelib}/module_build/builders/
 %{python3_sitelib}/module_build-*.egg-info/
 %{_bindir}/module-build
 
 
 %changelog
-* Tue Jan 21 2022 Martin Čurlej <mcurlej@redhat.com> - 0.1.0
+* Tue Jan 25 2022 Martin Čurlej <mcurlej@redhat.com> - 0.1.0-1
 - Added the ability to build stand-alone module streams (mcurlej@redhat.com)
 - Uses modular dependencies when building module streams (mcurlej@redhat.com)
 - Resuming of a failed module stream build on the component level (mcurlej@redhat.com)
