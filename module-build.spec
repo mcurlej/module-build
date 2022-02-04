@@ -1,12 +1,12 @@
 Name: module-build
 Version: 0.1.0
 Release: 1%{?dist}
-Summary: Tool/library for building module streams locally.
+Summary: Tool/library for building module streams locally
 License: MIT
 BuildArch: noarch
 
 URL: https://github.com/mcurlej/module-build
-Source0: https://github.com/mcurlej/module-build/archive/%{version}/%{name}-%{version}.tar.gz
+Source0: %{url}/archive/%{version}/%{name}-%{version}.tar.gz
 
 BuildRequires: python3-devel
 BuildRequires: python3-pytest
@@ -25,7 +25,7 @@ A library and a cli tool for building module streams.
 
 
 %prep
-%setup -q
+%autosetup -p1
 
 
 %build
@@ -43,7 +43,7 @@ A library and a cli tool for building module streams.
 %files
 %doc README.md
 %license LICENSE
-%{python3_sitelib}/module_build
+%{python3_sitelib}/module_build/
 %{python3_sitelib}/module_build-*.egg-info/
 %{_bindir}/module-build
 
