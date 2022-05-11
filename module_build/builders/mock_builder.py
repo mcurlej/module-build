@@ -239,8 +239,14 @@ class MockBuilder:
         :type module_stream: :class:`module_build.stream.ModuleBuild` object
         """
         mock_path, mock_filename = self.mock_cfg_path.rsplit("/", 1)
-        mock_cfg = mockbuild.config.load_config(mock_path, self.mock_cfg_path, None,
-                                                module_stream.version, mock_path)
+
+        # Support for mock2 and mock3
+        # mockbuild is missing __version__ attribute so we are handling Exception
+        try:
+            mock_cfg = mockbuild.config.load_config(mock_path, self.mock_cfg_path, None,
+                                                    module_stream.version, mock_path)
+        except TypeError:
+            mock_cfg = mockbuild.config.load_config(mock_path, self.mock_cfg_path, None)
 
         dist = None
         if "dist" in mock_cfg:
