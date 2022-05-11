@@ -73,6 +73,15 @@ def fake_get_artifacts(self, artifacts):
     return artifacts_nevra
 
 
+def fake_call_createrepo_c_on_dir(self, dir):
+    """Helper function to simulate createrepo_c command execution
+    """
+    if os.path.isdir(dir):
+        repo_dir = dir + "/repodata"
+        if not os.path.exists(repo_dir):
+            os.mkdir(repo_dir)
+
+
 def assert_modular_dependencies(modular_deps, expected_modular_deps):
     """ A helper method for comparing result and expected modular dependecies of a module stream """
 

@@ -13,6 +13,7 @@ from module_build.stream import ModuleStream
 
 class FullPathAction(argparse.Action):
     """ A custom argparse action which converts all relative paths to absolute. """
+
     def __call__(self, parser, args, values, option_string=None):
         full_path = self._get_full_path(values)
         # `add_repo` should be an `append` action
@@ -74,7 +75,12 @@ def get_arg_parser():
                               " also required when using the resume feature. You can specify which "
                               "module stream version you want to resume."))
 
-    parser.add_argument("-x", "--module-context", type=str,
+    parser.add_argument("-m", "--srpm-dir", type=str,
+                        help=("Path to directory with SRPMs. When set, all module components will be"
+                              " build from given sources."),
+                        action=FullPathAction)
+
+    parser.add_argument("-g", "--module-context", type=str,
                         help=("When set it will only build the selected context from the modules"
                               " stream."))
     # TODO verbose is not implemented
@@ -133,7 +139,7 @@ def main():
     if not mmd:
         raise Exception("no input")
 
-# PHASE2: init the builder
+        # PHASE2: init the builder
     if args.module_context:
         log_msg = "Starting to build the '{name}:{stream}:{context}' of the module stream.".format(
             name=module_stream.name,
@@ -149,7 +155,8 @@ def main():
     logger.info(log_msg)
 
     # TODO add exceptions
-    mock_builder = MockBuilder(args.mock_cfg, args.workdir, args.add_repo, args.rootdir)
+    mock_builder = MockBuilder(args.mock_cfg, args.workdir,
+                               args.add_repo, args.rootdir, args.srpm_dir)
 
 # PHASE3: try to build the module stream
     try:

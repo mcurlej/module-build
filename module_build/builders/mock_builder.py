@@ -1,26 +1,36 @@
 import copy
 import os
 import shutil
+import tempfile
 import subprocess
 from collections import OrderedDict
+from pathlib import Path
+import libarchive
 
 import mockbuild.config
+from module_build.constants import SPEC_EXTENSION, SRPM_EXTENSIONS, SRPM_MAPPING_FILENAME
 
 from module_build.log import logger
 from module_build.metadata import (generate_and_populate_output_mmd, mmd_to_str,
                                    generate_module_stream_version)
+from module_build.mock.info import MockBuildInfo
+from module_build.mock.config import MockConfig
 from module_build.modulemd import Modulemd
 
 
 class MockBuilder:
     # TODO enable building only specific contexts
     # TODO enable multiprocess queues for component building.
-    def __init__(self, mock_cfg_path, workdir, external_repos, rootdir):
+    def __init__(self, mock_cfg_path, workdir, external_repos, rootdir, srpm_dir):
         self.states = ["init", "building", "failed", "finished"]
         self.workdir = workdir
         self.mock_cfg_path = mock_cfg_path
         self.external_repos = external_repos
         self.rootdir = rootdir
+
+        self.mock_info = MockBuildInfo()
+        if srpm_dir:
+            self._map_srpm_files(srpm_dir)
 
     def build(self, module_stream, resume, context_to_build=None):
         # first we must process the metadata provided by the module stream
@@ -108,6 +118,14 @@ class MockBuilder:
                         logger.info(msg)
                         continue
 
+                    if self.mock_info.srpms_enabled():
+                        if srpm_path := self.mock_info.get_srpm_path(component["name"], component["ref"]):
+                            logger.info(f"Found SRPM for: {component['name']}")
+                        else:
+                            raise Exception(f"Missing SRPM for {component['name']}")
+                    else:
+                        srpm_path = ""
+
                     msg = "Building component {index} out of {all}...".format(
                         index=index + 1,
                         all=len(batch["components"]))
@@ -127,18 +145,18 @@ class MockBuilder:
                     )
                     logger.info(msg)
                     # we prepare a mock config for the mock buildroot.
-                    mock_cfg_str = self.generate_and_process_mock_cfg(component, context_name,
-                                                                      position)
+                    mock_cfg = self.generate_and_process_mock_cfg(component, context_name,
+                                                                  position)
 
                     msg = "Initializing mock buildroot for component '{name}'...".format(
                         name=component["name"]
                     )
                     logger.info(msg)
 
-                    buildroot = MockBuildroot(component, mock_cfg_str, batch["dir"], position,
+                    buildroot = MockBuildroot(component, mock_cfg, batch["dir"], position,
                                               build_context["modularity_label"],
                                               build_context["rpm_suffix"],
-                                              batch_repo, self.external_repos, self.rootdir)
+                                              batch_repo, self.external_repos, self.rootdir, srpm_path)
 
                     buildroot.run()
 
@@ -156,6 +174,47 @@ class MockBuilder:
 
             build_context["status"]["state"] = self.states[3]
             self.finalize_build_context(context_name)
+
+    def _map_srpm_files(self, srpm_dir):
+        logger.info(f"Mapping SRPMs in directory: {srpm_dir}")
+
+        srpm_dir = Path(srpm_dir)
+
+        for file in srpm_dir.iterdir():
+            if not set(SRPM_EXTENSIONS).issubset(set(file.suffixes)):
+                continue
+
+            logger.info(f"SRPM: Mapping component for '{file.name}' file")
+
+            with libarchive.file_reader(str(file.resolve())) as archive:
+                for entry in archive:
+                    # check for spec file
+                    if not all((entry.isfile, entry.pathname.endswith(SPEC_EXTENSION))):
+                        continue
+
+                    logger.info(
+                        f"SRPM: Located .spec file: '{entry.pathname}'")
+
+                    # read content of spec file and look for "Name:"
+                    with tempfile.NamedTemporaryFile() as tmp:
+                        for block in entry.get_blocks():
+                            tmp.write(block)
+
+                        # Reset fd
+                        tmp.flush()
+                        tmp.seek(0)
+
+                        for line in tmp:
+                            # we are still in bytes
+                            line_str = line.decode("utf-8")
+
+                            if line_str.startswith("Name:"):
+                                component_name = line_str.split(":", 1)[1].strip()
+                                logger.info(
+                                    f"SRPM: Found SRPM: '{file.name}' for component: '{component_name}'")
+                                self.mock_info.add_srpm(component_name, srpm_dir / file.name)
+                                break
+                    break
 
     def final_report(self):
         pass
@@ -239,8 +298,14 @@ class MockBuilder:
         :type module_stream: :class:`module_build.stream.ModuleBuild` object
         """
         mock_path, mock_filename = self.mock_cfg_path.rsplit("/", 1)
-        mock_cfg = mockbuild.config.load_config(mock_path, self.mock_cfg_path, None,
-                                                module_stream.version, mock_path)
+
+        # Support for mock2 and mock3
+        # mockbuild is missing __version__ attribute so we are handling Exception
+        try:
+            mock_cfg = mockbuild.config.load_config(mock_path, self.mock_cfg_path, None,
+                                                    module_stream.version, mock_path)
+        except TypeError:
+            mock_cfg = mockbuild.config.load_config(mock_path, self.mock_cfg_path, None)
 
         dist = None
         if "dist" in mock_cfg:
@@ -363,16 +428,11 @@ class MockBuilder:
         return batches_dir_path
 
     def generate_and_process_mock_cfg(self, component, context_name, batch_num):
-        # TODO consider to remove from this class and make a standalone function
-        mock_cfg_str = ""
-        mock_cfg_str += "config_opts['scm'] = True\n"
-        mock_cfg_str += "config_opts['scm_opts']['method'] = 'distgit'\n"
-        mock_cfg_str += "config_opts['scm_opts']['package'] = '{component_name}'\n".format(
-            component_name=component["name"]
-        )
-        mock_cfg_str += "config_opts['scm_opts']['branch'] = '{component_ref}'\n".format(
-            component_ref=component["ref"]
-        )
+        mock_config = MockConfig(self.mock_cfg_path)
+
+        # building modules from SRPM don't require MBS plugin
+        if not self.mock_info.srpms_enabled():
+            mock_config.enable_mbs("distgit", component["name"], component["ref"])
 
         # we need to tell mock which modular build dependencies need to be enabled
         context = self.build_contexts[context_name]
@@ -384,29 +444,16 @@ class MockBuilder:
         # grouped into batch_0 by default and the `modular_batch_deps` will be an empty list.
         modular_batch_deps = context["build_batches"][batch_num]["modular_batch_deps"]
         modules_to_enable = modular_deps + modular_batch_deps
-        mock_cfg_str += "# we enable necesary build module dependencies.\n"
-        mock_cfg_str += "config_opts['module_enable'] = {modules}\n".format(
-            modules=modules_to_enable)
 
         buildroot_profiles = context["buildroot_profiles"]
         srpm_buildroot_profiles = context["srpm_buildroot_profiles"]
         profiles_to_install = buildroot_profiles + srpm_buildroot_profiles
 
-        mock_cfg_str += "config_opts['module_install'] = {profiles}\n".format(
-            profiles=profiles_to_install)
+        mock_config.enable_modules(modules_to_enable)
+        mock_config.enable_modules(profiles_to_install, True)
+        mock_config.add_macros(context["rpm_macros"])
 
-        mock_cfg_str += "# we set the necessary macros provided by the `build_opts` option.\n"
-        for m in context["rpm_macros"]:
-            if m:
-                macro, value = m.split(" ")
-                mock_cfg_str += "config_opts['macros']['{macro}'] = {value}\n".format(
-                    macro=macro,
-                    value=value,
-                )
-
-        mock_cfg_str += "include('{mock_cfg_path}')\n".format(mock_cfg_path=self.mock_cfg_path)
-
-        return mock_cfg_str
+        return mock_config
 
     def finalize_batch(self, position, context_name):
         msg = "Batch number {num} finished building all its components.".format(num=position)
@@ -920,21 +967,21 @@ class MockBuilder:
 
 
 class MockBuildroot:
-    def __init__(self, component, mock_cfg_str, batch_dir_path, batch_num, modularity_label,
-                 rpm_suffix, batch_repo, external_repos, rootdir):
+    def __init__(self, component, mock_cfg, batch_dir_path, batch_num, modularity_label,
+                 rpm_suffix, batch_repo, external_repos, rootdir, srpm_path):
 
         self.finished = False
         self.component = component
-        self.mock_cfg_str = mock_cfg_str
         self.batch_dir_path = batch_dir_path
         self.batch_num = batch_num
         self.modularity_label = modularity_label
         self.rpm_suffix = rpm_suffix
         self.result_dir_path = self._create_buildroot_result_dir()
-        self.mock_cfg_path = self._create_mock_cfg_file()
+        self.mock_cfg_path = mock_cfg.write_config(self.result_dir_path, self.component["name"])
         self.batch_repo = batch_repo
         self.external_repos = external_repos
         self.rootdir = rootdir
+        self.srpm_path = srpm_path
 
     def run(self):
         mock_cmd = ["mock", "-v", "-r", self.mock_cfg_path,
@@ -951,6 +998,9 @@ class MockBuildroot:
 
         if self.rootdir:
             mock_cmd.append("--rootdir={rootdir}".format(rootdir=self.rootdir))
+
+        if self.srpm_path:
+            mock_cmd.append(self.srpm_path)
 
         msg = "Running mock buildroot for component '{name}' with command:\n{cmd}".format(
             name=self.component["name"],
@@ -1017,20 +1067,3 @@ class MockBuildroot:
         logger.info(msg)
 
         return result_dir_path
-
-    def _create_mock_cfg_file(self):
-        mock_cfg_file_path = "{result_dir_path}/{component_name}_mock.cfg".format(
-            result_dir_path=self.result_dir_path,
-            component_name=self.component["name"]
-        )
-
-        with open(mock_cfg_file_path, "w") as f:
-            f.write(self.mock_cfg_str)
-
-        msg = "Mock config for '{name}' component written to: {path}".format(
-            name=self.component["name"],
-            path=mock_cfg_file_path,
-        )
-        logger.info(msg)
-
-        return mock_cfg_file_path
