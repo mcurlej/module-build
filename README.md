@@ -145,3 +145,11 @@ Sometimes a build of a component can consume a lot of disk space. By default `mo
 ```
 $ module-build -f flatpak-runtime.yaml -c /etc/mock/fedora-35-x86_64.cfg --rootdir=/path/to/custom/dir/ ./workdir
 ```
+
+## Building a module stream components from SRPMs
+This option allows to build all components directly from SRPM instead of utilizing SCM. You acn turn in on by specifiing directory path with source RPMs in `--srpm-dir`.
+<br />
+<br />
+```
+$ module-build -f flatpak-runtime.yaml -c /etc/mock/fedora-35-x86_64.cfg --srpm-dir /path/to/srpms  ./workdir
+```

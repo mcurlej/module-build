@@ -6,10 +6,11 @@ import pytest
 
 from module_build.builders.mock_builder import MockBuilder
 from module_build.stream import ModuleStream
-from tests import (fake_buildroot_run, fake_get_artifacts, get_full_data_path,
+from tests import (fake_buildroot_run, fake_call_createrepo_c_on_dir, fake_get_artifacts, get_full_data_path,
                    mock_mmdv3_and_version)
 
 
+@patch("module_build.builders.mock_builder.MockBuilder.call_createrepo_c_on_dir", new=fake_call_createrepo_c_on_dir)
 @patch("module_build.builders.mock_builder.MockBuilder.get_artifacts_nevra", new=fake_get_artifacts)
 @patch("module_build.builders.mock_builder.mockbuild.config.load_config",
        return_value={"target_arch": "x86_64", "dist": "fc35"})
@@ -17,10 +18,11 @@ def test_resume_module_build_failed_first_component(mock_config, tmpdir):
     """ We test to resume the module build from the first failed component """
     cwd = tmpdir.mkdir("workdir").strpath
     rootdir = None
+    srpm_dir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []
 
-    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir, srpm_dir)
 
     mmd, version = mock_mmdv3_and_version()
 
@@ -61,7 +63,7 @@ def test_resume_module_build_failed_first_component(mock_config, tmpdir):
     assert "perl-0:1.0-1.module_fc35+f26devel.x86_64.rpm" not in perl_comp_dir
 
     # we run the build again on the same working directory with the resume option on
-    builder_resumed = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
+    builder_resumed = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir, srpm_dir)
     with patch("module_build.builders.mock_builder.MockBuildroot.run",
                new=fake_buildroot_run):
         builder_resumed.build(module_stream, resume=True)
@@ -86,6 +88,7 @@ def test_resume_module_build_failed_first_component(mock_config, tmpdir):
     assert "perl-0:1.0-1.module_fc35+f26devel.x86_64.rpm" in perl_comp_dir
 
 
+@patch("module_build.builders.mock_builder.MockBuilder.call_createrepo_c_on_dir", new=fake_call_createrepo_c_on_dir)
 @patch("module_build.builders.mock_builder.MockBuilder.get_artifacts_nevra", new=fake_get_artifacts)
 @patch("module_build.builders.mock_builder.mockbuild.config.load_config",
        return_value={"target_arch": "x86_64", "dist": "fc35"})
@@ -93,10 +96,11 @@ def test_resume_module_build_failed_not_first_component(mock_config, tmpdir):
     """ We test to resume the module build from a failed component in the 4th batch """
     cwd = tmpdir.mkdir("workdir").strpath
     rootdir = None
+    srpm_dir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []
 
-    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir, srpm_dir)
 
     mmd, version = mock_mmdv3_and_version()
 
@@ -141,7 +145,7 @@ def test_resume_module_build_failed_not_first_component(mock_config, tmpdir):
     assert "perl-Digest-0:1.0-1.module_fc35+f26devel.x86_64.rpm" not in perl_digest_comp_dir
 
     # we run the build again on the same working directory with the resume option on
-    builder_resumed = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
+    builder_resumed = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir, srpm_dir)
     with patch("module_build.builders.mock_builder.MockBuildroot.run",
                new=fake_buildroot_run):
         builder_resumed.build(module_stream, resume=True)
@@ -166,6 +170,7 @@ def test_resume_module_build_failed_not_first_component(mock_config, tmpdir):
     assert "finished" in perl_digest_comp_dir
 
 
+@patch("module_build.builders.mock_builder.MockBuilder.call_createrepo_c_on_dir", new=fake_call_createrepo_c_on_dir)
 @patch("module_build.builders.mock_builder.MockBuilder.get_artifacts_nevra", new=fake_get_artifacts)
 @patch("module_build.builders.mock_builder.mockbuild.config.load_config",
        return_value={"target_arch": "x86_64", "dist": "fc35"})
@@ -174,10 +179,11 @@ def test_resume_module_build_failed_to_create_batch_yaml_file(mock_config, tmpdi
     missing """
     cwd = tmpdir.mkdir("workdir").strpath
     rootdir = None
+    srpm_dir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []
 
-    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir, srpm_dir)
 
     mmd, version = mock_mmdv3_and_version()
 
@@ -219,7 +225,7 @@ def test_resume_module_build_failed_to_create_batch_yaml_file(mock_config, tmpdi
     os.remove(yaml_file_path)
 
     # we run the build again on the same working directory with the resume option on
-    builder_resumed = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
+    builder_resumed = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir, srpm_dir)
     with patch("module_build.builders.mock_builder.MockBuildroot.run",
                new=fake_buildroot_run):
         builder_resumed.build(module_stream, resume=True)
@@ -249,6 +255,7 @@ def test_resume_module_build_failed_to_create_batch_yaml_file(mock_config, tmpdi
     assert os.path.isfile(finished_file_path)
 
 
+@patch("module_build.builders.mock_builder.MockBuilder.call_createrepo_c_on_dir", new=fake_call_createrepo_c_on_dir)
 @patch("module_build.builders.mock_builder.MockBuilder.get_artifacts_nevra", new=fake_get_artifacts)
 @patch("module_build.builders.mock_builder.mockbuild.config.load_config",
        return_value={"target_arch": "x86_64", "dist": "fc35"})
@@ -256,10 +263,11 @@ def test_resume_module_build_continue_with_new_batch(mock_config, tmpdir):
     """ We test to resume module build when a new batch directory has failed to create. """
     cwd = tmpdir.mkdir("workdir").strpath
     rootdir = None
+    srpm_dir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []
 
-    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir, srpm_dir)
 
     mmd, version = mock_mmdv3_and_version()
 
@@ -290,7 +298,7 @@ def test_resume_module_build_continue_with_new_batch(mock_config, tmpdir):
     shutil.rmtree(batch_3_path)
 
     # we run the build again on the same working directory with the resume option on
-    builder_resumed = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
+    builder_resumed = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir, srpm_dir)
     with patch("module_build.builders.mock_builder.MockBuildroot.run",
                new=fake_buildroot_run):
         builder_resumed.build(module_stream, resume=True)
@@ -322,16 +330,18 @@ def test_resume_module_build_continue_with_new_batch(mock_config, tmpdir):
     assert os.path.isfile(finished_file_path)
 
 
+@patch("module_build.builders.mock_builder.MockBuilder.call_createrepo_c_on_dir", new=fake_call_createrepo_c_on_dir)
 @patch("module_build.builders.mock_builder.MockBuilder.get_artifacts_nevra", new=fake_get_artifacts)
 @patch("module_build.builders.mock_builder.mockbuild.config.load_config",
        return_value={"target_arch": "x86_64", "dist": "fc35"})
 def test_resume_module_build_continue_with_next_context(mock_config, tmpdir):
     cwd = tmpdir.mkdir("workdir").strpath
     rootdir = None
+    srpm_dir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []
 
-    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir, srpm_dir)
 
     mmd, version = mock_mmdv3_and_version()
 
@@ -359,7 +369,7 @@ def test_resume_module_build_continue_with_next_context(mock_config, tmpdir):
     assert "finished" in first_context_dir
 
     # we run the build again on the same working directory with the resume option on
-    builder_resumed = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
+    builder_resumed = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir, srpm_dir)
     with patch("module_build.builders.mock_builder.MockBuildroot.run",
                new=fake_buildroot_run):
         builder_resumed.build(module_stream, resume=True)
@@ -381,6 +391,7 @@ def test_resume_module_build_continue_with_next_context(mock_config, tmpdir):
 
 
 @pytest.mark.parametrize("context", ["f26devel", "f27devel"])
+@patch("module_build.builders.mock_builder.MockBuilder.call_createrepo_c_on_dir", new=fake_call_createrepo_c_on_dir)
 @patch("module_build.builders.mock_builder.MockBuilder.get_artifacts_nevra", new=fake_get_artifacts)
 @patch("module_build.builders.mock_builder.mockbuild.config.load_config",
        return_value={"target_arch": "x86_64", "dist": "fc35"})
@@ -392,10 +403,11 @@ def test_resume_module_build_do_not_continue_with_next_context_when_context_spec
 
     cwd = tmpdir.mkdir("workdir").strpath
     rootdir = None
+    srpm_dir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []
 
-    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir, srpm_dir)
 
     mmd, version = mock_mmdv3_and_version()
 
@@ -426,7 +438,7 @@ def test_resume_module_build_do_not_continue_with_next_context_when_context_spec
     shutil.rmtree(batch_3_path)
 
     # we run the build again on the same working directory with the resume option on
-    builder_resumed = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
+    builder_resumed = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir, srpm_dir)
     with patch("module_build.builders.mock_builder.MockBuildroot.run",
                new=fake_buildroot_run):
         builder_resumed.build(module_stream, resume=True, context_to_build=context)
@@ -450,15 +462,17 @@ def test_resume_module_build_do_not_continue_with_next_context_when_context_spec
 
 @pytest.mark.parametrize("context", ["f26devel", "f27devel"])
 @patch("module_build.builders.mock_builder.MockBuilder.get_artifacts_nevra", new=fake_get_artifacts)
+@patch("module_build.builders.mock_builder.MockBuilder.call_createrepo_c_on_dir", new=fake_call_createrepo_c_on_dir)
 @patch("module_build.builders.mock_builder.mockbuild.config.load_config",
        return_value={"target_arch": "x86_64", "dist": "fc35"})
 def test_resume_module_build_first_specify_context_and_resume_without(mock_config, context, tmpdir):
     cwd = tmpdir.mkdir("workdir").strpath
     rootdir = None
+    srpm_dir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []
 
-    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
+    builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir, srpm_dir)
 
     mmd, version = mock_mmdv3_and_version()
 
@@ -489,7 +503,7 @@ def test_resume_module_build_first_specify_context_and_resume_without(mock_confi
     shutil.rmtree(batch_3_path)
 
     # we run the build again on the same working directory with the resume option on
-    builder_resumed = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir)
+    builder_resumed = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir, srpm_dir)
     with patch("module_build.builders.mock_builder.MockBuildroot.run",
                new=fake_buildroot_run):
         builder_resumed.build(module_stream, resume=True)

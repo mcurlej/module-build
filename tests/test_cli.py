@@ -27,7 +27,7 @@ def test_debug_option(mock_config, tmpdir):
 
     Args = namedtuple("Args", ["modulemd", "mock_cfg", "debug", "workdir", "resume",
                                "module_name", "module_stream", "module_version",
-                               "add_repo", "rootdir", "module_context"])
+                               "add_repo", "rootdir", "module_context", "srpm_dir"])
 
     args = Args(modulemd=full_path,
                 mock_cfg="/etc/mock/fedora-35-x86_64.cfg",
@@ -39,7 +39,8 @@ def test_debug_option(mock_config, tmpdir):
                 module_version=None,
                 rootdir=None,
                 add_repo=[],
-                module_context=None)
+                module_context=None,
+                srpm_dir=None)
 
     with patch("module_build.cli.get_arg_parser") as mock_parser:
         mock_parser.return_value.parse_args.return_value = args
@@ -62,7 +63,7 @@ def test_reraise_exception(mock_config, tmpdir):
 
     Args = namedtuple("Args", ["modulemd", "mock_cfg", "debug", "workdir", "resume",
                                "module_name", "module_stream", "module_version",
-                               "add_repo", "rootdir", "module_context"])
+                               "add_repo", "rootdir", "module_context", "srpm_dir"])
 
     args = Args(modulemd=full_path,
                 mock_cfg="/etc/mock/fedora-35-x86_64.cfg",
@@ -74,7 +75,8 @@ def test_reraise_exception(mock_config, tmpdir):
                 module_version=None,
                 rootdir=None,
                 add_repo=[],
-                module_context=None)
+                module_context=None,
+                srpm_dir=None)
 
     with patch("module_build.cli.get_arg_parser") as mock_parser:
         mock_parser.return_value.parse_args.return_value = args
@@ -116,7 +118,7 @@ def test_choose_context_to_build(tmpdir):
 
     Args = namedtuple("Args", ["modulemd", "mock_cfg", "debug", "workdir", "resume",
                                "module_name", "module_stream", "module_version",
-                               "add_repo", "rootdir", "module_context"])
+                               "add_repo", "rootdir", "module_context", "srpm_dir"])
 
     context_to_build = "f26devel"
 
@@ -130,7 +132,8 @@ def test_choose_context_to_build(tmpdir):
                 module_version=None,
                 rootdir=None,
                 add_repo=[],
-                module_context=context_to_build)
+                module_context=context_to_build,
+                srpm_dir=None)
 
     with patch("module_build.cli.get_arg_parser") as mock_parser:
         mock_parser.return_value.parse_args.return_value = args
