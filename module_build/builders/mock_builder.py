@@ -1,20 +1,19 @@
 import copy
 import os
 import shutil
-import tempfile
 import subprocess
+import tempfile
 from collections import OrderedDict
 from pathlib import Path
+
 import libarchive
-
 import mockbuild.config
-from module_build.constants import SPEC_EXTENSION, SRPM_EXTENSIONS, SRPM_MAPPING_FILENAME
-
+from module_build.constants import SPEC_EXTENSION, SRPM_EXTENSIONS
 from module_build.log import logger
-from module_build.metadata import (generate_and_populate_output_mmd, mmd_to_str,
-                                   generate_module_stream_version)
-from module_build.mock.info import MockBuildInfo
+from module_build.metadata import (generate_and_populate_output_mmd,
+                                   generate_module_stream_version, mmd_to_str)
 from module_build.mock.config import MockConfig
+from module_build.mock.info import MockBuildInfo
 from module_build.modulemd import Modulemd
 
 
