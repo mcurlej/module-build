@@ -1,13 +1,14 @@
 import os
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
 from module_build.builders.mock_builder import MockBuilder
-from module_build.stream import ModuleStream
 from module_build.metadata import load_modulemd_file_from_path
-from tests import (fake_call_createrepo_c_on_dir, mock_mmdv3_and_version, get_full_data_path, fake_get_artifacts,
-                   assert_modular_dependencies, fake_buildroot_run)
+from module_build.stream import ModuleStream
+from tests import (assert_modular_dependencies, fake_buildroot_run,
+                   fake_call_createrepo_c_on_dir, fake_get_artifacts,
+                   get_full_data_path, mock_mmdv3_and_version)
 
 
 def test_create_mock_builder(tmpdir):
@@ -433,32 +434,25 @@ def test_build_invalid_context(mock_config, tmpdir):
     assert "invalid_context" in err_msg
 
 
-@patch("module_build.builders.mock_builder.MockBuilder.call_createrepo_c_on_dir", new=fake_call_createrepo_c_on_dir)
+@pytest.mark.parametrize(
+    "create_fake_srpm",
+    [({"name": "unicorn"}, {"name": "rustc"}), ], indirect=True
+)
 @patch("module_build.mock.info.MockBuildInfo.srpms_enabled", return_value=True)
-@patch("module_build.mock.info.MockBuildInfo.get_srpm_path")
-@patch("module_build.builders.mock_builder.MockBuilder._map_srpm_files")
 @patch("module_build.builders.mock_builder.mockbuild.config.load_config",
        return_value={"target_arch": "x86_64", "dist": "fc35"})
-def test_srpm_build_with_missing_sources(mock_config, map_srpm, get_srpm, srpms, tmpdir):
+def test_srpm_build_with_missing_sources(mock_config, srpms, tmpdir, create_fake_srpm):
     """
     Test build in SRPM mode with missing sources.
     """
 
-    def fake_get_srpm(name, ref):
-        srpm_data = {
-            "not-flatpak-runtime-config": "/secret/path/to/flatpak-rpm-macros.src.rpm",
-            "random-cool-package": "/not_secret/path/random-cool-package-devel45.src.rpm",
-        }
-
-        if name in srpm_data:
-            return srpm_data[name]
-        else:
-            return None
-
-    get_srpm.side_effect = fake_get_srpm
+    # Validate created Fake SRPMs
+    fake_srpm_files = Path(create_fake_srpm).glob('*.rpm')
+    fake_srpm_files = [x for x in fake_srpm_files if x.is_file()]
+    assert 2 == len(fake_srpm_files)
 
     cwd = tmpdir.mkdir("workdir").strpath
-    srpm_dir = "/path/to/imaginary/folder"
+    srpm_dir = str(Path(create_fake_srpm).resolve())
     rootdir = None
     mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
     external_repos = []

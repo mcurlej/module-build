@@ -8,7 +8,7 @@ from pathlib import Path
 
 import libarchive
 import mockbuild.config
-from module_build.constants import SPEC_EXTENSION, SRPM_EXTENSIONS
+from module_build.constants import SPEC_EXTENSION, SRPM_EXTENSION
 from module_build.log import logger
 from module_build.metadata import (generate_and_populate_output_mmd,
                                    generate_module_stream_version, mmd_to_str)
@@ -175,14 +175,20 @@ class MockBuilder:
             self.finalize_build_context(context_name)
 
     def _map_srpm_files(self, srpm_dir):
+        """
+            Function responsible for mapping srpm names to modules names.
+            It extracts .spec file from the rpm and looks for 'Name:'
+            line with an actual name. All results are stored in mock_info
+            variable inside class object.
+
+        Args:
+            srpm_dir (str, Path): Path to directory with SRPM files
+        """
         logger.info(f"Mapping SRPMs in directory: {srpm_dir}")
 
-        srpm_dir = Path(srpm_dir)
+        srpm_dir = srpm_dir if isinstance(srpm_dir, Path) else Path(srpm_dir)
 
-        for file in srpm_dir.iterdir():
-            if not set(SRPM_EXTENSIONS).issubset(set(file.suffixes)):
-                continue
-
+        for file in srpm_dir.glob(f"*.{SRPM_EXTENSION}"):
             logger.info(f"SRPM: Mapping component for '{file.name}' file")
 
             with libarchive.file_reader(str(file.resolve())) as archive:
@@ -191,8 +197,7 @@ class MockBuilder:
                     if not all((entry.isfile, entry.pathname.endswith(SPEC_EXTENSION))):
                         continue
 
-                    logger.info(
-                        f"SRPM: Located .spec file: '{entry.pathname}'")
+                    logger.info(f"SRPM: Located .spec file: '{entry.pathname}'")
 
                     # read content of spec file and look for "Name:"
                     with tempfile.NamedTemporaryFile() as tmp:
@@ -209,8 +214,7 @@ class MockBuilder:
 
                             if line_str.startswith("Name:"):
                                 component_name = line_str.split(":", 1)[1].strip()
-                                logger.info(
-                                    f"SRPM: Found SRPM: '{file.name}' for component: '{component_name}'")
+                                logger.info(f"SRPM: Found SRPM: '{file.name}' for component: '{component_name}'")
                                 self.mock_info.add_srpm(component_name, srpm_dir / file.name)
                                 break
                     break

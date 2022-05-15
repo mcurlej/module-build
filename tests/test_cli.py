@@ -3,10 +3,10 @@ from collections import namedtuple
 from unittest.mock import patch
 
 import pytest
-
-from module_build.cli import main, get_arg_parser
+from module_build.cli import get_arg_parser, main
 from module_build.stream import ModuleStream
-from tests import get_full_data_path, TestException
+
+from tests import TestException, get_full_data_path
 
 
 def fake_raise_exception(self):
