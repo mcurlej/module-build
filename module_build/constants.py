@@ -9,7 +9,7 @@ KEY_MODULE_ENABLE = "config_opts['module_enable']"
 KEY_MACROS_PREFIX = "config_opts['macros']"
 
 # Mock
-SRPM_EXTENSIONS = [".rpm", ".src"]
+SRPM_EXTENSION = "src.rpm"
 SPEC_EXTENSION = ".spec"
 
 SRPM_MAPPING_FILENAME = "srpm_mapping"
