@@ -1,7 +1,13 @@
-from module_build.constants import (KEY_MACROS_PREFIX, KEY_MODULE_ENABLE,
-                                    KEY_MODULE_INSTALL, KEY_SCM_BRANCH,
-                                    KEY_SCM_ENABLE, KEY_SCM_METHOD,
-                                    KEY_SCM_PACKAGE, KEY_SCM_PREFIX_ALL)
+from module_build.constants import (
+    KEY_MACROS_PREFIX,
+    KEY_MODULE_ENABLE,
+    KEY_MODULE_INSTALL,
+    KEY_SCM_BRANCH,
+    KEY_SCM_ENABLE,
+    KEY_SCM_METHOD,
+    KEY_SCM_PACKAGE,
+    KEY_SCM_PREFIX_ALL,
+)
 from module_build.log import logger
 
 
@@ -12,8 +18,8 @@ class MockConfig:
 
     def enable_modules(self, modules, to_install=False):
         """
-            Enables options to install/enable module dependencies while constructing
-            the buildroot.
+        Enables options to install/enable module dependencies while constructing
+        the buildroot.
 
         Args:
             modules (list): Names of modules.
@@ -35,16 +41,18 @@ class MockConfig:
             package (str): Package name
             branch (str): Name of repository branch
         """
-        self.content.update({
-            KEY_SCM_ENABLE: "True",
-            KEY_SCM_METHOD: f"'{method}'",
-            KEY_SCM_PACKAGE: f"'{package}'",
-            KEY_SCM_BRANCH: f"'{branch}'",
-        })
+        self.content.update(
+            {
+                KEY_SCM_ENABLE: "True",
+                KEY_SCM_METHOD: f"'{method}'",
+                KEY_SCM_PACKAGE: f"'{package}'",
+                KEY_SCM_BRANCH: f"'{branch}'",
+            }
+        )
 
     def disable_mbs(self):
         """
-            Removes all MBS keys from mock config.
+        Removes all MBS keys from mock config.
         """
         for k in list(self.content.keys()):
             if k.startswith(KEY_SCM_PREFIX_ALL):
@@ -52,7 +60,7 @@ class MockConfig:
 
     def add_macros(self, macros):
         """
-            Add specified macros to mock config.
+        Add specified macros to mock config.
 
         Args:
             macros (list): List of macros in format: MACRO<space>VALUE
@@ -64,7 +72,7 @@ class MockConfig:
 
     def write_config(self, result_dir, component_name):
         """
-            Writes mock config to provided directory.
+        Writes mock config to provided directory.
 
         Args:
             result_dir (str): Output directory for mock config file
@@ -81,6 +89,6 @@ class MockConfig:
 
             f.write(f"include('{self.base_mock_cfg_path}')")
 
-        logger.info("Mock config for '{component_name}' component written to: {path}")
+        logger.info(f"Mock config for '{component_name}' component written to: {path}")
 
         return path
