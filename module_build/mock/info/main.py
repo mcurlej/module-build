@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import mockbuild.config
 from module_build import modulemd
 from module_build.constants import RPM_BUILDROOT_PROFILE, SRPM_BUILDROOT_PROFILE
 from module_build.mock.info.srpm import MockBuildInfoSRPM
@@ -11,6 +10,14 @@ class MockBuildInfo:
         self.srpms = []
         self.contexts = []
         self._buildroot_profiles = {}
+
+    @property
+    def arch(self):
+        return self._arch
+
+    @property
+    def dist(self):
+        return self._dist
 
     @property
     def buildroot_profiles(self):
@@ -53,6 +60,14 @@ class MockBuildInfo:
         """
         return self.srpms != []
 
+    @arch.setter
+    def arch(self, arch):
+        self._arch = arch
+
+    @dist.setter
+    def dist(self, dist):
+        self._dist = dist
+
     def _srpm_present(self, name):
         """
         Checks for SRPM existance with given name.
@@ -64,6 +79,11 @@ class MockBuildInfo:
             list: MockBuildInfoSRPM objects
         """
         return [srpm for srpm in self.srpms if srpm.name == name]
+
+    def _get_all_components_names(self):
+        for context in self.contexts:
+            for batch in context.get_batches():
+                yield batch.get_components_names()
 
     def add_srpm(self, name, path):
         """
@@ -119,26 +139,10 @@ class MockBuildInfo:
         else:
             return self.contexts
 
-    def get_dist_and_arch_info(self, mock_cfg_path, msv):
-        mock_path, mock_filename = mock_cfg_path.rsplit("/", 1)
-
-        try:
-            mock_cfg = mockbuild.config.load_config(mock_path, mock_cfg_path, None, msv, mock_path)
-        except TypeError:
-            mock_cfg = mockbuild.config.load_config(mock_path, mock_cfg_path, None)
-
-        self.dist = mock_cfg["dist"] if "dist" in mock_cfg else None
-
-        if "target_arch" in mock_cfg:
-            self.arch = mock_cfg["target_arch"]
-        else:
-            raise Exception(
-                (
-                    "Your mock configuration file does not provide the information about "
-                    "the architecture for which the module stream should be build. Please"
-                    " inlcude the `target_arch` config option in your initial mock cfg!"
-                )
-            )
+    def check_all_srpms(self):
+        for component_name in self._get_all_components_names():
+            if not self._srpm_present(component_name):
+                raise Exception(f"Missing SRPM for component {component_name}")
 
     def generate_build_profiles(self, external_repos):
         """

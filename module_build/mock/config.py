@@ -1,3 +1,4 @@
+import mockbuild.config
 from module_build.constants import (
     KEY_MACROS_PREFIX,
     KEY_MODULE_ENABLE,
@@ -13,6 +14,8 @@ from module_build.log import logger
 
 class MockConfig:
     def __init__(self, mock_cfg_path):
+        self.arch = None
+        self.dist = None
         self.content = {}
         self.base_mock_cfg_path = mock_cfg_path
 
@@ -92,3 +95,27 @@ class MockConfig:
         logger.info(f"Mock config for '{component_name}' component written to: {path}")
 
         return path
+
+    @staticmethod
+    def get_dist_and_arch_info(mock_cfg_path, msv):
+        mock_path, mock_filename = mock_cfg_path.rsplit("/", 1)
+
+        try:
+            mock_cfg = mockbuild.config.load_config(mock_path, mock_cfg_path, None, msv, mock_path)
+        except TypeError:
+            mock_cfg = mockbuild.config.load_config(mock_path, mock_cfg_path, None)
+
+        dist = mock_cfg["dist"] if "dist" in mock_cfg else None
+
+        if "target_arch" in mock_cfg:
+            arch = mock_cfg["target_arch"]
+        else:
+            raise Exception(
+                (
+                    "Your mock configuration file does not provide the information about "
+                    "the architecture for which the module stream should be build. Please"
+                    " inlcude the `target_arch` config option in your initial mock cfg!"
+                )
+            )
+
+        return dist, arch

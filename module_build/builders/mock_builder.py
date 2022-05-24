@@ -1,15 +1,11 @@
-import copy
 import os
 import shutil
 import subprocess
-import tempfile
+import sys
 from pathlib import Path
 
-import libarchive
-import mockbuild.config
-from module_build.constants import SPEC_EXTENSION, SRPM_EXTENSION
 from module_build.log import logger
-from module_build.metadata import generate_and_populate_output_mmd, generate_module_stream_version, mmd_to_str
+from module_build.metadata import mmd_to_str
 from module_build.mock.config import MockConfig
 from module_build.mock.info.context import MockBuildInfoContext
 from module_build.mock.info.helpers import MockBuildState
@@ -17,27 +13,26 @@ from module_build.mock.info.main import MockBuildInfo
 
 
 class MockBuilder:
-    # TODO enable building only specific contexts
-    # TODO enable multiprocess queues for component building.
     def __init__(self, mock_cfg_path, workdir, external_repos, rootdir, srpm_dir):
-        self.states = ["init", "building", "failed", "finished"]
         self.workdir = workdir
         self.mock_cfg_path = mock_cfg_path
         self.external_repos = external_repos
         self.rootdir = rootdir
 
+        # Init data
+        self._precheck()
         self.mock_info = MockBuildInfo()
         if srpm_dir:
             self._map_srpm_files(srpm_dir)
 
     def build(self, module_stream, resume, context_to_build=None):
-
         # Parse external repo metadata for modules depedency needs.
         logger.info("Processing build profiles from external repositories.")
         self.mock_info.generate_build_profiles(self.external_repos)
 
-        # Get dist and arch information from mock conf file
-        self.mock_info.get_dist_and_arch_info(self.mock_cfg_path, module_stream.version)
+        # Get dist and arch information from mock conf file.
+        logger.info("Extracting arch and dist information from mock conf file.")
+        self.mock_info.dist, self.mock_info.arch = MockConfig.get_dist_and_arch_info(self.mock_cfg_path, module_stream.version)
 
         # Process the metadata provided by the module stream.
         # Components need to be organized to `build_batches`
@@ -49,20 +44,22 @@ class MockBuilder:
         if context_to_build and not self.mock_info.get_context(context_to_build):
             raise Exception(f"The '{context_to_build}' does not exists in this module stream!")
 
-        # if resume:
-        #     msg = "------------- Resuming Module Build --------------"
-        #     logger.info(msg)
-        #     self.find_and_set_resume_point()
+        if self.mock_info.srpms_enabled:
+            logger.info("Checking that all components have their matching SRPM...")
+            self.mock_info.check_all_srpms()
+
+        # TODO. Resume needs rework.
+        if resume:
+            msg = "------------- Resuming Module Build --------------"
+            logger.info(msg)
+            self.find_and_set_resume_point()
 
         # When the metadata processing is done, we can ge to the building of the defined `contexts`
         for context in self.mock_info.get_context():
             # Check if there is a specified context to be build and if the current context is the
             # specified context to be build. If not skip.
-            if context_to_build and context_to_build != context.name:
-                continue
-
-            if context.state == MockBuildState.FINISHED and resume:
-                logger.info(f"The build context '{context.name}' state is set to '{MockBuildState.FINISHED}'. Skipping...")
+            if context.not_needed_or_finished(resume, context_to_build):
+                logger.info(f"Skipping building context '{context.name}' state: '{MockBuildState.FINISHED}'")
                 continue
 
             logger.info(f"Building context '{context.name}' of module stream '{module_stream.name}:{module_stream.stream}'...")
@@ -74,15 +71,13 @@ class MockBuilder:
             # Mark for start building context
             context.state = MockBuildState.BUILDING
 
-            # Initialize batches repo
-            # batch_repo_path = os.path.abspath(build_context["dir"] + "/build_batches")
-            # batch_repo = "file://{repo}".format(repo=batch_repo_path)
+            logger.info("Initializing batch repository...")
             context.init_batch_repo()
 
             # Batches are presorted
             for batch in context.get_batches():
                 # Skip batch building if FINISHED and resume mode is ON.
-                if batch.state == MockBuildState.FINISHED and resume:
+                if batch.is_finished(resume):
                     logger.info(
                         f"The batch number '{batch.index}' from context '{context.name}' state is set to '{MockBuildState.FINISHED}'. Skipping..."
                     )
@@ -92,12 +87,10 @@ class MockBuilder:
                 logger.info(f"Building batch number {batch.index}...")
 
                 # Create batch directory
+                logger.info(f"Creating batch directory if needed for batch number {batch.index}...")
                 batch.create_directory(context.dir)
 
-                # if "dir" not in batch:
-                #     batch["dir"] = self.create_build_batch_dir(context_name, position)
-
-                # Update stat info
+                logger.info("Updating batch information status")
                 context.batch_position = batch.index
                 batch.state = MockBuildState.BUILDING
 
@@ -125,7 +118,7 @@ class MockBuilder:
 
                     # we prepare a mock config for the mock buildroot.
                     logger.info(f"Generating mock config for component '{component['name']}'...")
-                    mock_cfg = self.generate_and_process_mock_cfg(component, context.name, batch.index)
+                    mock_cfg = self._generate_and_process_mock_cfg(component, context.name, batch.index)
 
                     logger.info(f"Initializing mock buildroot for component '{component['name']}'...")
 
@@ -155,7 +148,13 @@ class MockBuilder:
                 # when the batch has finished building all its components, we will turn the batch
                 # dir into a module stream. `finalize_batch` will add a modules.yaml file so the dir
                 # and its built rpms can be used in the /next batch as modular dependencies
-                # self.finalize_batch(position, context_name)
+                batch.finalize_batch(context.name, context.batches_num, context.dependencies)
+
+                # create/update the repository in `build_batches` dir so we can use it as
+                # modular batch dependency repository for buildtime dependencies. Each finished
+                # batch will be used for the next one as modular dependency.
+                logger.info("Updating build batch modular repository...")
+                context.init_batch_repo()
 
                 batch.state = MockBuildState.FINISHED
 
@@ -163,124 +162,14 @@ class MockBuilder:
             context.state = MockBuildState.FINISHED
             # self.finalize_build_context(context_name)
 
-    def _map_srpm_files(self, srpm_dir):
-        """
-            Function responsible for mapping srpm names to modules names.
-            It extracts .spec file from the rpm and looks for 'Name:'
-            line with an actual name. All results are stored in mock_info
-            variable inside class object.
-
-        Args:
-            srpm_dir (str, Path): Path to directory with SRPM files
-        """
-        logger.info(f"Mapping SRPMs in directory: {srpm_dir}")
-
-        srpm_dir = srpm_dir if isinstance(srpm_dir, Path) else Path(srpm_dir)
-
-        for file in srpm_dir.glob(f"*.{SRPM_EXTENSION}"):
-            logger.info(f"SRPM: Mapping component for '{file.name}' file")
-
-            with libarchive.file_reader(str(file.resolve())) as archive:
-                for entry in archive:
-                    # check for spec file
-                    if not all((entry.isfile, entry.pathname.endswith(SPEC_EXTENSION))):
-                        continue
-
-                    logger.info(f"SRPM: Located .spec file: '{entry.pathname}'")
-
-                    # read content of spec file and look for "Name:"
-                    with tempfile.NamedTemporaryFile() as tmp:
-                        for block in entry.get_blocks():
-                            tmp.write(block)
-
-                        # Reset fd
-                        tmp.flush()
-                        tmp.seek(0)
-
-                        for line in tmp:
-                            # we are still in bytes
-                            line_str = line.decode("utf-8")
-
-                            if line_str.startswith("Name:"):
-                                component_name = line_str.split(":", 1)[1].strip()
-                                logger.info(f"SRPM: Found SRPM: '{file.name}' for component: '{component_name}'")
-                                self.mock_info.add_srpm(component_name, srpm_dir / file.name)
-                                break
-                    break
+    def _precheck(self):
+        # Check if workdir directory exists
+        if not Path(self.workdir).is_dir():
+            logger.fatal("Workdir directory does not exists.")
+            sys.exit(1)
 
     def final_report(self):
         pass
-
-    # def generate_build_batches(self, components):
-    #     """Method which organizes components of a module stream into build batches.
-
-    #     :param components: list of components
-    #     :type components: list
-    #     :return build_batches: dict of build batches.
-    #     :rtype build_batches: dict
-    #     """
-    #     build_batches = {}
-
-    #     for component in components:
-    #         position = component["buildorder"]
-
-    #         if position not in build_batches:
-    #             build_batches[position] = {
-    #                 "components": [],
-    #                 "curr_comp": 0,
-    #                 "curr_comp_state": self.states[0],
-    #                 "batch_state": self.states[0],
-    #                 "finished_builds": [],
-    #                 "modular_batch_deps": [],
-    #             }
-
-    #         build_batches[position]["components"].append(component)
-
-    #     # after we have the build batches populated we need to generate list of module streams,
-    #     # which will be used in the batches as modular dependencies. Each batch will serve as a
-    #     # module stream dependency for the next batch.
-    #     sorted_build_batches = sorted(build_batches)
-
-    #     for order in sorted_build_batches:
-    #         index = sorted_build_batches.index(order)
-    #         # every batch will have the previous batch as a modular stream dependency excluding the
-    #         # first batch. The first batch does not have any previous batch so there will be no
-    #         # no modular batch dependency.
-    #         if index != 0:
-    #             # we need to find out how many batches are there previously
-    #             prev_batches = [b for b in sorted_build_batches[:index]]
-    #             # for each previous batch we add a batch modular stream dependency
-    #             for b in prev_batches:
-    #                 build_batches[order]["modular_batch_deps"].append("batch{b}:{b}".format(
-    #                     b=b
-    #                 ))
-
-    #     msg = "The following build batches where identified according to the buildorder:"
-    #     logger.info(msg)
-
-    #     msg_batch = ""
-    #     for order in sorted_build_batches:
-    #         comp_names = []
-
-    #         for comp in build_batches[order]["components"]:
-    #             comp_names.append(comp["name"])
-
-    #         msg_batch += """
-    #         batch number (buildorder): {order}
-    #         component count: {count}
-    #         modular batch dependencies:
-    #         {deps}
-    #         components:
-    #         {comp_names}
-    #         ---------------------""".format(order=order, count=len(comp_names),
-    #                                         comp_names=comp_names,
-    #                                         deps=build_batches[order]["modular_batch_deps"])
-    #     logger.info(msg_batch)
-
-    #     msg = "Total build batch count: {num}".format(num=len(sorted_build_batches))
-    #     logger.info(msg)
-
-    #     return build_batches
 
     def _create_build_contexts(self, module_stream):
         """
@@ -290,67 +179,20 @@ class MockBuilder:
         :param module_stream: a module stream object
         :type module_stream: :class:`module_build.stream.ModuleBuild` object
         """
-        mock_path, mock_filename = self.mock_cfg_path.rsplit("/", 1)
 
-        # Support for mock2 and mock3
-        # mockbuild is missing __version__ attribute so we are handling Exception
-        try:
-            mock_cfg = mockbuild.config.load_config(mock_path, self.mock_cfg_path, None, module_stream.version, mock_path)
-        except TypeError:
-            mock_cfg = mockbuild.config.load_config(mock_path, self.mock_cfg_path, None)
-
-        # dist = mock_cfg["dist"] if "dist" in mock_cfg else None
-
-        if "target_arch" in mock_cfg:
-            self.arch = mock_cfg["target_arch"]
-        else:
-            raise Exception(
-                (
-                    "Your mock configuration file does not provide the information about "
-                    "the architecture for which the module stream should be build. Please"
-                    " inlcude the `target_arch` config option in your initial mock cfg!"
-                )
-            )
-
-        #############
-        #############
-        ##############
         for context in module_stream.contexts:
             logger.info(f"Processing '{context.context_name}' context...")
-            context.set_arch(self.arch)
+
+            # TODO: This needs be bo moved probably to MockInfo because it
+            # duplicates itself in every Context....
+            context.set_arch(self.mock_info.arch)
 
             # Generate MockBuildInfoContext object with default values
+            logger.info("Generating Context object...")
             build_info_context = MockBuildInfoContext(context, self.mock_info.dist)
-
-            # build_context = {
-            #     "rpm_suffix": context.get_rpm_suffix(dist),
-            #     "modular_deps": context.dependencies,
-            #     "rpm_macros": context.rpm_macros,
-            #     "filtered_rpms": module_stream.filtered_rpms,
-            #     "buildroot_profiles": [],
-            #     "srpm_buildroot_profiles": [],
-            #     "status": {
-            #         "state": self.states[0],
-            #         "current_build_batch": 0,
-            #         "num_components": len(module_stream.components),
-            #         "num_finished_comps": 0,
-            #     }
-            # }
 
             logger.info("Checking for buildtime module dependencies...")
             build_info_context.check_buildroot_profiles(build_info_context.buildtime_dependencies)
-
-            # if buildroot_profiles:
-            #     for ms in build_context["modular_deps"]["buildtime"]:
-            #         if ms in buildroot_profiles:
-            #             stream_profile = buildroot_profiles[ms]
-            #             build_context["buildroot_profiles"].append(stream_profile)
-
-            # if srpm_buildroot_profiles:
-            #     for ms in build_context["modular_deps"]["buildtime"]:
-            #         if ms in srpm_buildroot_profiles:
-            #             stream_profile = srpm_buildroot_profiles[ms]
-            #             build_context["srpm_buildroot_profiles"].append(stream_profile)
 
             logger.info("Generating build batches from the components buildorder...")
             build_info_context.generate_build_batches(module_stream.components)
@@ -358,43 +200,7 @@ class MockBuilder:
             logger.info(f"Finished generating build context: '{build_info_context.name}'")
             self.mock_info.add_context(build_info_context)
 
-    # def create_build_context_dir(self, context_name):
-    #     if not self.build_contexts:
-    #         # TODO make this to a custom exception
-    #         raise Exception(
-    #             ("No `build_contexts` metadata found! Please run the `create_build_" "contexts` method before creating directories for contexts.")
-    #         )
-
-    #     context_dir_path = os.path.join(self.workdir, self.build_contexts[context_name]["nsvca"])
-    #     os.makedirs(context_dir_path)
-
-    #     msg = "Created dir for '{context}' context: {path}".format(context=context_name, path=context_dir_path)
-    #     logger.info(msg)
-
-    #     return context_dir_path
-
-    # def create_build_batch_dir(self, context_name, batch_num):
-    #     if not self.build_contexts:
-    #         # TODO make this to a custom exception
-    #         raise Exception(
-    #             ("No `build_contexts` metadata found! Please run the `create_build_" "contexts` method before creating directories for contexts.")
-    #         )
-
-    #     batches_dir_path = os.path.join(
-    #         self.workdir, self.build_contexts[context_name]["nsvca"], "build_batches", "batch_{batch_num}".format(batch_num=batch_num)
-    #     )
-    #     os.makedirs(batches_dir_path)
-
-    #     msg = "Created dir for batch number {num} from '{context}' context: {path}".format(
-    #         num=batch_num,
-    #         context=context_name,
-    #         path=batches_dir_path,
-    #     )
-    #     logger.info(msg)
-
-    #     return batches_dir_path
-
-    def generate_and_process_mock_cfg(self, component, context_name, batch_num):
+    def _generate_and_process_mock_cfg(self, component, context_name, batch_num):
         mock_config = MockConfig(self.mock_cfg_path)
 
         # building modules from SRPM don't require MBS plugin
@@ -425,90 +231,6 @@ class MockBuilder:
         mock_config.add_macros(context.rpm_macros)
 
         return mock_config
-
-    def finalize_batch(self, position, context_name):
-        logger.info("Batch number {position} finished building all its components.")
-
-        # Get Context & Batch Objects
-        context = self.mock_info.get_context(context_name)
-        build_batch = context.get_batch(position)
-
-        logger.info(f"Artifact count: {len(build_batch.finished_builds)}")
-
-        msg = "\nList of artifacts:\n"
-        for fb in build_batch.finished_builds:
-            msg += "- {file_path}\n".format(file_path=fb)
-        logger.info(msg)
-
-        num_batches = len(context.get_batchs())
-        last_batch = sorted(self.build_contexts[context_name]["build_batches"])[-1]
-        batch_dir = self.build_contexts[context_name]["build_batches"][position]["dir"]
-        # we need to create a module stream out of a build_batch. This will happen only when there
-        # is more batches then 1. If there is only 1 batch (no set buildorder) nothing needs to
-        # be done. If the batch is the last in the buildorder it will be not used as a modular
-        # dependency for any other batch so we also do nothing.
-        if num_batches > 1 and last_batch != position:
-            name = "batch{num}".format(num=position)
-            stream = "{num}".format(num=position)
-            context = "b{num}".format(num=position)
-            version = generate_module_stream_version()
-            if position + 1 == num_batches:
-                description = ("This module stream is a buildorder modular dependency for " "batch_{last_batch}.").format(last_batch=num_batches)
-            else:
-                description = ("This module stream is a buildorder modular dependency for " "batch_{num}-{last_batch}.").format(
-                    num=position + 1, last_batch=num_batches
-                )
-            summary = description
-            mod_license = "MIT"
-            # for each new batch mmd we want a copy of the modular dependencies which are
-            # provided from the initial mmd file
-            modular_deps = copy.deepcopy(self.build_contexts[context_name]["modular_deps"])
-            modular_batch_deps = build_batch["modular_batch_deps"]
-
-            for d in modular_batch_deps:
-                modular_deps["buildtime"].append(d)
-                modular_deps["runtime"].append(d)
-
-            components = build_batch["components"]
-
-            artifacts = self.get_artifacts_nevra(build_batch["finished_builds"])
-
-            mmd = generate_and_populate_output_mmd(
-                name, stream, context, version, description, summary, mod_license, components, artifacts, modular_deps
-            )
-
-            mmd_str = mmd_to_str(mmd)
-
-            mmd_file_name = "/{n}:{s}:{v}:{c}:{a}.modulemd.yaml".format(
-                n=name,
-                s=stream,
-                v=version,
-                c=context,
-                a=self.build_contexts[context_name]["metadata"].arch,
-            )
-            file_path = batch_dir + mmd_file_name
-
-            with open(file_path, "w") as f:
-                f.write(mmd_str)
-
-            msg = ("Batch number {position} is defined as modular batch dependency for batches " "{num}-{last_batch}").format(
-                position=position, num=position + 1, last_batch=last_batch
-            )
-            logger.info(msg)
-            msg = "Modular metadata written to: {path}".format(path=file_path)
-
-            # create/update the repository in `build_batches` dir so we can use it as
-            # modular batch dependency repository for buildtime dependencies. Each finished
-            # batch will be used for the next one as modular dependency.
-            msg = "Updating build batch modular repository..."
-            logger.info(msg)
-            build_batches_dir = self.build_contexts[context_name]["dir"] + "/build_batches"
-            self.call_createrepo_c_on_dir(build_batches_dir)
-        # we create a dummy file which marks the whole batch as finished. This serves as a marker
-        # for the --resume feature to mark the whole build as finished
-        finished_file_path = batch_dir + "/finished"
-        with open(finished_file_path, "w") as f:
-            f.write("finished")
 
     def call_createrepo_c_on_dir(self, dir):
         # TODO move out as a standalone function

@@ -41,6 +41,10 @@ class MockBuildInfoContext:
         return self._status["state"]
 
     @property
+    def batches_num(self):
+        return len(self._build_batches)
+
+    @property
     def rpm_suffix(self):
         return self._metadata.get_rpm_suffix(self._dist)  # Ehhhh distttt
 
@@ -205,3 +209,6 @@ class MockBuildInfoContext:
         if not self.batch_repo_path.is_dir():
             self.batch_repo_path.mkdir(parents=True, exist_ok=True)
             call_createrepo_c_on_dir(self.batch_repo_path)
+
+    def not_needed_or_finished(self, resume, context_to_build=None):
+        return (context_to_build and context_to_build != self.name) or (self.state == MockBuildState.FINISHED and resume)
