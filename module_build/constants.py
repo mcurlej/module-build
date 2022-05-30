@@ -14,3 +14,10 @@ SPEC_EXTENSION = ".spec"
 
 SRPM_MAPPING_FILENAME = "srpm_mapping"
 ROOT_BATCH_FOLDER = "build_batches"
+
+# Context
+SRPM_BUILDROOT_PROFILE = "srpm-buildroot"
+RPM_BUILDROOT_PROFILE = "buildroot"
+
+# Batch
+DEFAULT_LICENSE_TYPE = "MIT"
