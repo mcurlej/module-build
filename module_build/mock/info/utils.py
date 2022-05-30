@@ -11,7 +11,7 @@ def call_createrepo_c_on_dir(dir):
     logger.info(msg)
 
     mock_cmd = ["createrepo_c", dir]
-    proc = subprocess.Popen(mock_cmd)
+    proc = subprocess.Popen(mock_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
 
     if proc.returncode != 0:

@@ -5,12 +5,9 @@ import time
 logger = logging.getLogger("module-build")
 
 
-def init_logging(cwd, yaml_filename, logger):
-    main_log_file_path = cwd + "/{yaml}-module-build-{timestamp}.log".format(
-        yaml=yaml_filename,
-        timestamp=int(time.time())
-    )
-    log_format = '%(asctime)s | %(levelname)s | %(message)s'
+def init_logging(cwd, yaml_filename, no_stdout, logger):
+    main_log_file_path = cwd + "/{yaml}-module-build-{timestamp}.log".format(yaml=yaml_filename, timestamp=int(time.time()))
+    log_format = "%(asctime)s | %(levelname)s | %(message)s"
 
     logger.setLevel("INFO")
 
@@ -20,8 +17,10 @@ def init_logging(cwd, yaml_filename, logger):
     main_log_handle.setFormatter(log_formatter)
 
     logger.addHandler(main_log_handle)
-    # at the same time we want to write to stdout
-    cli_handler = logging.StreamHandler(sys.stdout)
-    cli_handler.setFormatter(log_formatter)
 
-    logger.addHandler(cli_handler)
+    if not no_stdout:
+        # at the same time we want to write to stdout
+        cli_handler = logging.StreamHandler(sys.stdout)
+        cli_handler.setFormatter(log_formatter)
+
+        logger.addHandler(cli_handler)
