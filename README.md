@@ -153,3 +153,12 @@ This option allows to build all components directly from SRPM instead of utilizi
 ```
 $ module-build -f flatpak-runtime.yaml -c /etc/mock/fedora-35-x86_64.cfg --srpm-dir /path/to/srpms  ./workdir
 ```
+
+## Building a module in multiprocess mode.
+This option allows to build components simultaneously. To utilize this mode, please specify amount of `--workers` higher than `1`.
+This mode requires to turn off logger stdout by `--no-stdout` argument.
+<br />
+<br />
+```
+$ module-build -f perl-bootstrap-new.yaml -c /etc/mock/fedora-35-x86_64.cfg --module-name=perl-bootstrap -w 2 --no-stdout /workdir
+```

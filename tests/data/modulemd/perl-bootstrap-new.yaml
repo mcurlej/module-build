@@ -1,0 +1,1099 @@
+document: modulemd-packager
+version: 3
+data:
+    stream: '5.34'
+    summary: Perl bootstrap module for bootstrapping Perl module
+    description: >
+        This is the Perl interpreter and a set of modules written in Perl
+        language intended for bootstrapping a perl module. This bootstrap
+        module disables some optional tests to limit the amount of components.
+        This module is not intended for a public use. It's an intermediate
+        step for building the perl module.
+    license: [MIT]
+    xmd:
+        mbs_options:
+            # Prevent from contaminating build root with non-modular Perl packages
+            blocked_packages:
+                - perl
+                - perl-Algorithm-Diff
+                - perl-Archive-Tar
+                - perl-Archive-Zip
+                - perl-autodie
+                - perl-bignum
+                - perl-Capture-Tiny
+                - perl-Carp
+                - perl-Class-Inspector
+                - perl-Compress-Bzip2
+                - perl-Compress-Raw-Bzip2
+                - perl-Compress-Raw-Lzma
+                - perl-Compress-Raw-Zlib
+                - perl-Config-AutoConf
+                - perl-Config-Perl-V
+                - perl-constant
+                - perl-CPAN
+                - perl-CPAN-DistnameInfo
+                - perl-CPAN-Meta
+                - perl-CPAN-Meta-Requirements
+                - perl-CPAN-Meta-YAML
+                - perl-Data-Dumper
+                - perl-Data-OptList
+                - perl-Data-Section
+                - perl-DB_File
+                - perl-Devel-PPPort
+                - perl-Devel-Size
+                - perl-Digest
+                - perl-Digest-MD5
+                - perl-Digest-SHA
+                - perl-Digest-SHA1
+                - perl-Encode
+                - perl-Encode-Locale
+                - perl-Env
+                - perl-experimental
+                - perl-Exporter
+                - perl-ExtUtils-CBuilder
+                - perl-ExtUtils-Config
+                - perl-ExtUtils-Helpers
+                - perl-ExtUtils-Install
+                - perl-ExtUtils-InstallPaths
+                - perl-ExtUtils-MakeMaker
+                - perl-ExtUtils-Manifest
+                - perl-ExtUtils-ParseXS
+                - perl-Fedora-VSP
+                - perl-File-Fetch
+                - perl-File-HomeDir
+                - perl-File-Path
+                - perl-File-Remove
+                - perl-File-ShareDir
+                - perl-File-ShareDir-Install
+                - perl-File-Temp
+                - perl-File-Which
+                - perl-Filter
+                - perl-Filter-Simple
+                - perl-generators
+                - perl-Getopt-Long
+                - perl-HTTP-Tiny
+                - perl-Importer
+                - perl-inc-latest
+                - perl-IO-Compress
+                - perl-IO-Compress-Lzma
+                - perl-IO-Socket-IP
+                - perl-IO-Tty
+                - perl-IO-Zlib
+                - perl-IPC-Cmd
+                - perl-IPC-Run
+                - perl-IPC-System-Simple
+                - perl-IPC-SysV
+                - perl-JSON-PP
+                - perl-libnet
+                - perl-local-lib
+                - perl-Locale-Maketext
+                - perl-Math-BigInt
+                - perl-Math-BigInt-FastCalc
+                - perl-Math-BigInt-GMP
+                - perl-Math-BigRat
+                - perl-MIME-Base64
+                - perl-Module-Build
+                - perl-Module-Build-Tiny
+                - perl-Module-CoreList
+                - perl-Module-Install
+                - perl-Module-Install-AuthorTests
+                - perl-Module-Install-ExtraTests
+                - perl-Module-Load
+                - perl-Module-Load-Conditional
+                - perl-Module-Metadata
+                - perl-Module-ScanDeps
+                - perl-Module-Signature
+                - perl-MRO-Compat
+                - perl-Net-Ping
+                - perl-Object-HashBase
+                - perl-Package-Generator
+                - perl-Params-Check
+                - perl-Params-Util
+                - perl-parent
+                - perl-PathTools
+                - perl-Perl-OSType
+                - perl-perlfaq
+                - perl-PerlIO-via-QuotedPrint
+                - perl-Pod-Checker
+                - perl-Pod-Escapes
+                - perl-Pod-Parser
+                - perl-Pod-Perldoc
+                - perl-Pod-Simple
+                - perl-Pod-Usage
+                - perl-podlators
+                - perl-Readonly
+                - perl-Scalar-List-Utils
+                - perl-Socket
+                - perl-Software-License
+                - perl-srpm-macros
+                - perl-Storable
+                - perl-Sub-Exporter
+                - perl-Sub-Install
+                - perl-Sys-Syslog
+                - perl-Term-ANSIColor
+                - perl-Term-Cap
+                - perl-Term-Size-Any
+                - perl-Term-Size-Perl
+                - perl-Term-Table
+                - perl-TermReadKey
+                - perl-Test-FailWarnings
+                - perl-Test-Harness
+                - perl-Test-Needs
+                - perl-Test-NoWarnings
+                - perl-Test-Pod
+                - perl-Test-Requires
+                - perl-Test-Simple
+                - perl-Text-Balanced
+                - perl-Text-Diff
+                - perl-Text-Glob
+                - perl-Text-ParseWords
+                - perl-Text-Tabs+Wrap
+                - perl-Text-Template
+                - perl-Thread-Queue
+                - perl-threads
+                - perl-threads-shared
+                - perl-Tie-RefHash
+                - perl-Time-HiRes
+                - perl-Time-Local
+                - perl-Try-Tiny
+                - perl-Unicode-Collate
+                - perl-Unicode-Normalize
+                - perl-URI
+                - perl-version
+                - perl-YAML-Tiny
+    configurations:
+        - context: 'f34'
+          platform: f34
+          buildopts:
+              rpms:
+                  macros: |
+                      %perl_bootstrap 1
+                      %_with_perl_enables_groff 1
+                      %_without_perl_enables_syslog_test 1
+                      %_with_perl_enables_systemtap 1
+                      %_without_perl_enables_tcsh 1
+                      %_without_perl_Archive_Tar_enables_optional_test 1
+                      %_without_perl_autodie_enables_optional_test 1
+                      %_without_perl_Compress_Bzip2_enables_optional_test 1
+                      %_without_perl_Compress_Raw_Bzip2_enables_optional_test 1
+                      %_without_perl_Compress_Raw_Lzma_enables_optional_test 1
+                      %_without_perl_Compress_Raw_Zlib_enables_optional_test 1
+                      %_without_perl_Config_AutoConf_enables_File_Slurper 1
+                      %_without_perl_Config_AutoConf_enables_Scalar_Util 1
+                      %_without_perl_constant_enables_optional_test 1
+                      %_without_perl_CPAN_enables_optional_test 1
+                      %_without_perl_CPAN_Meta_Requirements_enables_optional_test 1
+                      %_without_perl_CPAN_Meta_YAML_enables_extra_test 1
+                      %_without_perl_Data_OptList_enables_extra_test 1
+                      %_without_perl_Data_Section_enables_extra_test 1
+                      %_without_perl_Data_Section_enables_optional_test 1
+                      %_without_perl_DB_File_enables_optional_test 1
+                      %_without_perl_Devel_PPPort_enables_optional_test 1
+                      %_without_perl_Devel_Size_enables_optional_test 1
+                      %_without_perl_Digest_SHA_enables_optional_test 1
+                      %_without_perl_Exporter_enables_optional_test 1
+                      %_without_perl_ExtUtils_Install_enables_optional_test 1
+                      %_without_perl_File_ShareDir_enables_optional_deps 1
+                      %_without_perl_Filter_enables_optional_test 1
+                      %_without_perl_IO_Compress_enables_optional_test 1
+                      %_without_perl_IO_Compress_Lzma_enables_optional_test 1
+                      %_without_perl_IO_Socket_IP_enables_optional_test 1
+                      %_without_perl_IPC_Cmd_enables_IPC_Run 1
+                      %_without_perl_IPC_System_Simple_enables_optional_test 1
+                      %_without_perl_IPC_SysV_enables_optional_test 1
+                      %_without_perl_JSON_PP_enables_optional_test 1
+                      %_without_perl_libnet_enables_ssl 1
+                      %_without_perl_Locale_Maketext_enables_optional_test 1
+                      %_without_perl_Module_Build_enables_optional_test 1
+                      %_without_perl_Module_CoreList_enables_optional_test 1
+                      %_without_perl_Module_Runtime_enables_optional_test 1
+                      %_without_perl_Module_ScanDeps_enables_optional_tests 1
+                      %_without_perl_Net_Ping_enables_optional_test 1
+                      %_without_perl_Package_Generator_enables_extra_test 1
+                      %_without_perl_Perl_OSType_enables_optional_test 1
+                      %_without_perl_Pod_Parser_enables_optional_test 1
+                      %_without_perl_Pod_Perldoc_enables_tk_test 1
+                      %_without_perl_Pod_Simple_enables_optional_test 1
+                      %_without_perl_Software_License_enables_extra_test 1
+                      %_without_perl_Software_License_enables_optional_test 1
+                      %_without_perl_Sub_Exporter_enables_extra_test 1
+                      %_without_perl_Sub_Install_enables_optional_test 1
+                      %_without_perl_Sys_Syslog_enables_optional_test 1
+                      %_without_perl_Term_Size_Any_enabels_optional_test 1
+                      %_with_perl_Term_Table_enables_terminal 1
+                      %_without_perl_Term_Table_enables_unicode 1
+                      %_without_perl_Test_Harness_enables_optional_test 1
+                      %_without_perl_Test_NoWarnings_enables_stack_trace 1
+                      %_without_perl_Test_Simple_enables_Module_Pluggable 1
+                      %_without_perl_Test_Simple_enables_optional_test 1
+                      %_without_perl_Text_Template_enables_optional_test 1
+                      %_without_perl_Try_Tiny_enables_optional_test 1
+                      %_without_perl_URI_enables_Business_ISBN 1
+                      %_without_perl_version_enables_optional_test 1
+                      %_without_perl_YAML_Tiny_enables_JSON_MaybeX_test 1
+        - context: 'f35'
+          platform: f35
+          buildopts:
+              rpms:
+                  macros: |
+                      %perl_bootstrap 1
+                      %_with_perl_enables_groff 1
+                      %_without_perl_enables_syslog_test 1
+                      %_with_perl_enables_systemtap 1
+                      %_without_perl_enables_tcsh 1
+                      %_without_perl_Archive_Tar_enables_optional_test 1
+                      %_without_perl_autodie_enables_optional_test 1
+                      %_without_perl_Compress_Bzip2_enables_optional_test 1
+                      %_without_perl_Compress_Raw_Bzip2_enables_optional_test 1
+                      %_without_perl_Compress_Raw_Lzma_enables_optional_test 1
+                      %_without_perl_Compress_Raw_Zlib_enables_optional_test 1
+                      %_without_perl_Config_AutoConf_enables_File_Slurper 1
+                      %_without_perl_Config_AutoConf_enables_Scalar_Util 1
+                      %_without_perl_constant_enables_optional_test 1
+                      %_without_perl_CPAN_enables_optional_test 1
+                      %_without_perl_CPAN_Meta_Requirements_enables_optional_test 1
+                      %_without_perl_CPAN_Meta_YAML_enables_extra_test 1
+                      %_without_perl_Data_OptList_enables_extra_test 1
+                      %_without_perl_Data_Section_enables_extra_test 1
+                      %_without_perl_Data_Section_enables_optional_test 1
+                      %_without_perl_DB_File_enables_optional_test 1
+                      %_without_perl_Devel_PPPort_enables_optional_test 1
+                      %_without_perl_Devel_Size_enables_optional_test 1
+                      %_without_perl_Digest_SHA_enables_optional_test 1
+                      %_without_perl_Exporter_enables_optional_test 1
+                      %_without_perl_ExtUtils_Install_enables_optional_test 1
+                      %_without_perl_File_ShareDir_enables_optional_deps 1
+                      %_without_perl_Filter_enables_optional_test 1
+                      %_without_perl_IO_Compress_enables_optional_test 1
+                      %_without_perl_IO_Compress_Lzma_enables_optional_test 1
+                      %_without_perl_IO_Socket_IP_enables_optional_test 1
+                      %_without_perl_IPC_Cmd_enables_IPC_Run 1
+                      %_without_perl_IPC_System_Simple_enables_optional_test 1
+                      %_without_perl_IPC_SysV_enables_optional_test 1
+                      %_without_perl_JSON_PP_enables_optional_test 1
+                      %_without_perl_libnet_enables_ssl 1
+                      %_without_perl_Locale_Maketext_enables_optional_test 1
+                      %_without_perl_Module_Build_enables_optional_test 1
+                      %_without_perl_Module_CoreList_enables_optional_test 1
+                      %_without_perl_Module_Runtime_enables_optional_test 1
+                      %_without_perl_Module_ScanDeps_enables_optional_tests 1
+                      %_without_perl_Net_Ping_enables_optional_test 1
+                      %_without_perl_Package_Generator_enables_extra_test 1
+                      %_without_perl_Perl_OSType_enables_optional_test 1
+                      %_without_perl_Pod_Parser_enables_optional_test 1
+                      %_without_perl_Pod_Perldoc_enables_tk_test 1
+                      %_without_perl_Pod_Simple_enables_optional_test 1
+                      %_without_perl_Software_License_enables_extra_test 1
+                      %_without_perl_Software_License_enables_optional_test 1
+                      %_without_perl_Sub_Exporter_enables_extra_test 1
+                      %_without_perl_Sub_Install_enables_optional_test 1
+                      %_without_perl_Sys_Syslog_enables_optional_test 1
+                      %_without_perl_Term_Size_Any_enabels_optional_test 1
+                      %_with_perl_Term_Table_enables_terminal 1
+                      %_without_perl_Term_Table_enables_unicode 1
+                      %_without_perl_Test_Harness_enables_optional_test 1
+                      %_without_perl_Test_NoWarnings_enables_stack_trace 1
+                      %_without_perl_Test_Simple_enables_Module_Pluggable 1
+                      %_without_perl_Test_Simple_enables_optional_test 1
+                      %_without_perl_Text_Template_enables_optional_test 1
+                      %_without_perl_Try_Tiny_enables_optional_test 1
+                      %_without_perl_URI_enables_Business_ISBN 1
+                      %_without_perl_version_enables_optional_test 1
+                      %_without_perl_YAML_Tiny_enables_JSON_MaybeX_test 1
+        - context: 'f36'
+          platform: f36
+          buildopts:
+              rpms:
+                  macros: |
+                      %perl_bootstrap 1
+                      %_with_perl_enables_groff 1
+                      %_without_perl_enables_syslog_test 1
+                      %_with_perl_enables_systemtap 1
+                      %_without_perl_enables_tcsh 1
+                      %_without_perl_Archive_Tar_enables_optional_test 1
+                      %_without_perl_autodie_enables_optional_test 1
+                      %_without_perl_Compress_Bzip2_enables_optional_test 1
+                      %_without_perl_Compress_Raw_Bzip2_enables_optional_test 1
+                      %_without_perl_Compress_Raw_Lzma_enables_optional_test 1
+                      %_without_perl_Compress_Raw_Zlib_enables_optional_test 1
+                      %_without_perl_Config_AutoConf_enables_File_Slurper 1
+                      %_without_perl_Config_AutoConf_enables_Scalar_Util 1
+                      %_without_perl_constant_enables_optional_test 1
+                      %_without_perl_CPAN_enables_optional_test 1
+                      %_without_perl_CPAN_Meta_Requirements_enables_optional_test 1
+                      %_without_perl_CPAN_Meta_YAML_enables_extra_test 1
+                      %_without_perl_Data_OptList_enables_extra_test 1
+                      %_without_perl_Data_Section_enables_extra_test 1
+                      %_without_perl_Data_Section_enables_optional_test 1
+                      %_without_perl_DB_File_enables_optional_test 1
+                      %_without_perl_Devel_PPPort_enables_optional_test 1
+                      %_without_perl_Devel_Size_enables_optional_test 1
+                      %_without_perl_Digest_SHA_enables_optional_test 1
+                      %_without_perl_Exporter_enables_optional_test 1
+                      %_without_perl_ExtUtils_Install_enables_optional_test 1
+                      %_without_perl_File_ShareDir_enables_optional_deps 1
+                      %_without_perl_Filter_enables_optional_test 1
+                      %_without_perl_IO_Compress_enables_optional_test 1
+                      %_without_perl_IO_Compress_Lzma_enables_optional_test 1
+                      %_without_perl_IO_Socket_IP_enables_optional_test 1
+                      %_without_perl_IPC_Cmd_enables_IPC_Run 1
+                      %_without_perl_IPC_System_Simple_enables_optional_test 1
+                      %_without_perl_IPC_SysV_enables_optional_test 1
+                      %_without_perl_JSON_PP_enables_optional_test 1
+                      %_without_perl_libnet_enables_ssl 1
+                      %_without_perl_Locale_Maketext_enables_optional_test 1
+                      %_without_perl_Module_Build_enables_optional_test 1
+                      %_without_perl_Module_CoreList_enables_optional_test 1
+                      %_without_perl_Module_Runtime_enables_optional_test 1
+                      %_without_perl_Module_ScanDeps_enables_optional_tests 1
+                      %_without_perl_Net_Ping_enables_optional_test 1
+                      %_without_perl_Package_Generator_enables_extra_test 1
+                      %_without_perl_Perl_OSType_enables_optional_test 1
+                      %_without_perl_Pod_Parser_enables_optional_test 1
+                      %_without_perl_Pod_Perldoc_enables_tk_test 1
+                      %_without_perl_Pod_Simple_enables_optional_test 1
+                      %_without_perl_Software_License_enables_extra_test 1
+                      %_without_perl_Software_License_enables_optional_test 1
+                      %_without_perl_Sub_Exporter_enables_extra_test 1
+                      %_without_perl_Sub_Install_enables_optional_test 1
+                      %_without_perl_Sys_Syslog_enables_optional_test 1
+                      %_without_perl_Term_Size_Any_enabels_optional_test 1
+                      %_with_perl_Term_Table_enables_terminal 1
+                      %_without_perl_Term_Table_enables_unicode 1
+                      %_without_perl_Test_Harness_enables_optional_test 1
+                      %_without_perl_Test_NoWarnings_enables_stack_trace 1
+                      %_without_perl_Test_Simple_enables_Module_Pluggable 1
+                      %_without_perl_Test_Simple_enables_optional_test 1
+                      %_without_perl_Text_Template_enables_optional_test 1
+                      %_without_perl_Try_Tiny_enables_optional_test 1
+                      %_without_perl_URI_enables_Business_ISBN 1
+                      %_without_perl_version_enables_optional_test 1
+                      %_without_perl_YAML_Tiny_enables_JSON_MaybeX_test 1
+        - context: 'f37'
+          platform: f37
+          buildopts:
+              rpms:
+                  macros: |
+                      %perl_bootstrap 1
+                      %_with_perl_enables_groff 1
+                      %_without_perl_enables_syslog_test 1
+                      %_with_perl_enables_systemtap 1
+                      %_without_perl_enables_tcsh 1
+                      %_without_perl_Archive_Tar_enables_optional_test 1
+                      %_without_perl_autodie_enables_optional_test 1
+                      %_without_perl_Compress_Bzip2_enables_optional_test 1
+                      %_without_perl_Compress_Raw_Bzip2_enables_optional_test 1
+                      %_without_perl_Compress_Raw_Lzma_enables_optional_test 1
+                      %_without_perl_Compress_Raw_Zlib_enables_optional_test 1
+                      %_without_perl_Config_AutoConf_enables_File_Slurper 1
+                      %_without_perl_Config_AutoConf_enables_Scalar_Util 1
+                      %_without_perl_constant_enables_optional_test 1
+                      %_without_perl_CPAN_enables_optional_test 1
+                      %_without_perl_CPAN_Meta_Requirements_enables_optional_test 1
+                      %_without_perl_CPAN_Meta_YAML_enables_extra_test 1
+                      %_without_perl_Data_OptList_enables_extra_test 1
+                      %_without_perl_Data_Section_enables_extra_test 1
+                      %_without_perl_Data_Section_enables_optional_test 1
+                      %_without_perl_DB_File_enables_optional_test 1
+                      %_without_perl_Devel_PPPort_enables_optional_test 1
+                      %_without_perl_Devel_Size_enables_optional_test 1
+                      %_without_perl_Digest_SHA_enables_optional_test 1
+                      %_without_perl_Exporter_enables_optional_test 1
+                      %_without_perl_ExtUtils_Install_enables_optional_test 1
+                      %_without_perl_File_ShareDir_enables_optional_deps 1
+                      %_without_perl_Filter_enables_optional_test 1
+                      %_without_perl_IO_Compress_enables_optional_test 1
+                      %_without_perl_IO_Compress_Lzma_enables_optional_test 1
+                      %_without_perl_IO_Socket_IP_enables_optional_test 1
+                      %_without_perl_IPC_Cmd_enables_IPC_Run 1
+                      %_without_perl_IPC_System_Simple_enables_optional_test 1
+                      %_without_perl_IPC_SysV_enables_optional_test 1
+                      %_without_perl_JSON_PP_enables_optional_test 1
+                      %_without_perl_libnet_enables_ssl 1
+                      %_without_perl_Locale_Maketext_enables_optional_test 1
+                      %_without_perl_Module_Build_enables_optional_test 1
+                      %_without_perl_Module_CoreList_enables_optional_test 1
+                      %_without_perl_Module_Runtime_enables_optional_test 1
+                      %_without_perl_Module_ScanDeps_enables_optional_tests 1
+                      %_without_perl_Net_Ping_enables_optional_test 1
+                      %_without_perl_Package_Generator_enables_extra_test 1
+                      %_without_perl_Perl_OSType_enables_optional_test 1
+                      %_without_perl_Pod_Parser_enables_optional_test 1
+                      %_without_perl_Pod_Perldoc_enables_tk_test 1
+                      %_without_perl_Pod_Simple_enables_optional_test 1
+                      %_without_perl_Software_License_enables_extra_test 1
+                      %_without_perl_Software_License_enables_optional_test 1
+                      %_without_perl_Sub_Exporter_enables_extra_test 1
+                      %_without_perl_Sub_Install_enables_optional_test 1
+                      %_without_perl_Sys_Syslog_enables_optional_test 1
+                      %_without_perl_Term_Size_Any_enabels_optional_test 1
+                      %_with_perl_Term_Table_enables_terminal 1
+                      %_without_perl_Term_Table_enables_unicode 1
+                      %_without_perl_Test_Harness_enables_optional_test 1
+                      %_without_perl_Test_NoWarnings_enables_stack_trace 1
+                      %_without_perl_Test_Simple_enables_Module_Pluggable 1
+                      %_without_perl_Test_Simple_enables_optional_test 1
+                      %_without_perl_Text_Template_enables_optional_test 1
+                      %_without_perl_Try_Tiny_enables_optional_test 1
+                      %_without_perl_URI_enables_Business_ISBN 1
+                      %_without_perl_version_enables_optional_test 1
+                      %_without_perl_YAML_Tiny_enables_JSON_MaybeX_test 1
+        - context: 'eln'
+          platform: eln
+          buildopts:
+              rpms:
+                  macros: |
+                      %perl_bootstrap 1
+                      %_with_perl_enables_groff 1
+                      %_without_perl_enables_syslog_test 1
+                      %_with_perl_enables_systemtap 1
+                      %_without_perl_enables_tcsh 1
+                      %_without_perl_Archive_Tar_enables_optional_test 1
+                      %_without_perl_autodie_enables_optional_test 1
+                      %_without_perl_Compress_Bzip2_enables_optional_test 1
+                      %_without_perl_Compress_Raw_Bzip2_enables_optional_test 1
+                      %_without_perl_Compress_Raw_Lzma_enables_optional_test 1
+                      %_without_perl_Compress_Raw_Zlib_enables_optional_test 1
+                      %_without_perl_Config_AutoConf_enables_File_Slurper 1
+                      %_without_perl_Config_AutoConf_enables_Scalar_Util 1
+                      %_without_perl_constant_enables_optional_test 1
+                      %_without_perl_CPAN_enables_optional_test 1
+                      %_without_perl_CPAN_Meta_Requirements_enables_optional_test 1
+                      %_without_perl_CPAN_Meta_YAML_enables_extra_test 1
+                      %_without_perl_Data_OptList_enables_extra_test 1
+                      %_without_perl_Data_Section_enables_extra_test 1
+                      %_without_perl_Data_Section_enables_optional_test 1
+                      %_without_perl_DB_File_enables_optional_test 1
+                      %_without_perl_Devel_PPPort_enables_optional_test 1
+                      %_without_perl_Devel_Size_enables_optional_test 1
+                      %_without_perl_Digest_SHA_enables_optional_test 1
+                      %_without_perl_Exporter_enables_optional_test 1
+                      %_without_perl_ExtUtils_Install_enables_optional_test 1
+                      %_without_perl_File_ShareDir_enables_optional_deps 1
+                      %_without_perl_Filter_enables_optional_test 1
+                      %_without_perl_IO_Compress_enables_optional_test 1
+                      %_without_perl_IO_Compress_Lzma_enables_optional_test 1
+                      %_without_perl_IO_Socket_IP_enables_optional_test 1
+                      %_without_perl_IPC_Cmd_enables_IPC_Run 1
+                      %_without_perl_IPC_System_Simple_enables_optional_test 1
+                      %_without_perl_IPC_SysV_enables_optional_test 1
+                      %_without_perl_JSON_PP_enables_optional_test 1
+                      %_without_perl_libnet_enables_ssl 1
+                      %_without_perl_Locale_Maketext_enables_optional_test 1
+                      %_without_perl_Module_Build_enables_optional_test 1
+                      %_without_perl_Module_CoreList_enables_optional_test 1
+                      %_without_perl_Module_Runtime_enables_optional_test 1
+                      %_without_perl_Module_ScanDeps_enables_optional_tests 1
+                      %_without_perl_Net_Ping_enables_optional_test 1
+                      %_without_perl_Package_Generator_enables_extra_test 1
+                      %_without_perl_Perl_OSType_enables_optional_test 1
+                      %_without_perl_Pod_Parser_enables_optional_test 1
+                      %_without_perl_Pod_Perldoc_enables_tk_test 1
+                      %_without_perl_Pod_Simple_enables_optional_test 1
+                      %_without_perl_Software_License_enables_extra_test 1
+                      %_without_perl_Software_License_enables_optional_test 1
+                      %_without_perl_Sub_Exporter_enables_extra_test 1
+                      %_without_perl_Sub_Install_enables_optional_test 1
+                      %_without_perl_Sys_Syslog_enables_optional_test 1
+                      %_without_perl_Term_Size_Any_enabels_optional_test 1
+                      %_with_perl_Term_Table_enables_terminal 1
+                      %_without_perl_Term_Table_enables_unicode 1
+                      %_without_perl_Test_Harness_enables_optional_test 1
+                      %_without_perl_Test_NoWarnings_enables_stack_trace 1
+                      %_without_perl_Test_Simple_enables_Module_Pluggable 1
+                      %_without_perl_Test_Simple_enables_optional_test 1
+                      %_without_perl_Text_Template_enables_optional_test 1
+                      %_without_perl_Try_Tiny_enables_optional_test 1
+                      %_without_perl_URI_enables_Business_ISBN 1
+                      %_without_perl_version_enables_optional_test 1
+                      %_without_perl_YAML_Tiny_enables_JSON_MaybeX_test 1
+    references:
+        community: https://docs.fedoraproject.org/en-US/modularity/
+        documentation: https://asamalik.fedorapeople.org/boltron-doc/development/building-modules/module-guidelines.html
+        tracker: https://bugzilla.redhat.com/buglist.cgi?classification=Fedora&product=Fedora%20Modules&component=perl-bootstrap
+    components:
+        rpms:
+            perl:
+                rationale: The Perl interpreter.
+                ref: f36
+                buildorder: 0
+            perl-Fedora-VSP:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 1
+            perl-generators:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 2
+            perl-Algorithm-Diff:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Archive-Tar:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Archive-Zip:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-autodie:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Capture-Tiny:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Carp:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Class-Inspector:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Compress-Bzip2:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Compress-Raw-Bzip2:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Compress-Raw-Lzma:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Compress-Raw-Zlib:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Config-Perl-V:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-constant:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-CPAN-DistnameInfo:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-CPAN-Meta:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-CPAN-Meta-Requirements:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-CPAN-Meta-YAML:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Data-Dumper:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-DB_File:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Devel-PPPort:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Devel-Size:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Digest:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Digest-MD5:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Digest-SHA:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Digest-SHA1:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Encode:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Encode-Locale:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Env:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-experimental:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Exporter:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-ExtUtils-CBuilder:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-ExtUtils-Config:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-ExtUtils-Helpers:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-ExtUtils-Install:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-ExtUtils-MakeMaker:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-ExtUtils-Manifest:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-ExtUtils-ParseXS:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-File-Fetch:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-File-Path:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-File-Remove:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-File-ShareDir-Install:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-File-Temp:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-File-Which:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Filter:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Filter-Simple:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Getopt-Long:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-HTTP-Tiny:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Importer:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-inc-latest:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-IO-Socket-IP:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-IO-Tty:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-IO-Zlib:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-IPC-Cmd:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-IPC-System-Simple:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-IPC-SysV:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-JSON-PP:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-libnet:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Locale-Maketext:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Math-BigInt:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-MIME-Base64:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Module-CoreList:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Module-Install-ExtraTests:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Module-Load:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Module-Load-Conditional:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Module-Metadata:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-MRO-Compat:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Net-Ping:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Object-HashBase:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Params-Check:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-parent:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-PathTools:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-perlfaq:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-PerlIO-via-QuotedPrint:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Perl-OSType:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Pod-Escapes:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Pod-Checker:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-podlators:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Pod-Parser:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Pod-Perldoc:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Pod-Simple:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Scalar-List-Utils:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Socket:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Storable:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Sub-Install:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Sys-Syslog:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Term-ANSIColor:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Term-Cap:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-TermReadKey:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Term-Size-Perl:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Test-Harness:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Test-Needs:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Test-NoWarnings:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Test-Pod:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Test-Requires:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Test-Simple:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Text-Balanced:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Text-Glob:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Text-ParseWords:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Text-Tabs+Wrap:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Text-Template:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Thread-Queue:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-threads:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-threads-shared:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Tie-RefHash:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Time-HiRes:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Time-Local:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Try-Tiny:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Unicode-Collate:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Unicode-Normalize:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-version:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-YAML-Tiny:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 3
+            perl-Config-AutoConf:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 4
+            perl-CPAN:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 4
+            perl-ExtUtils-InstallPaths:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 4
+            perl-File-HomeDir:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 4
+            perl-File-ShareDir:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 4
+            perl-IO-Compress:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 4
+            perl-Math-BigInt-FastCalc:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 4
+            perl-Math-BigInt-GMP:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 4
+            perl-Math-BigRat:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 4
+            perl-Module-Build:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 4
+            perl-Module-ScanDeps:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 4
+            perl-Pod-Usage:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 4
+            perl-Term-Size-Any:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 4
+            perl-Test-FailWarnings:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 4
+            perl-Text-Diff:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 4
+            perl-URI:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 4
+            perl-bignum:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 5
+            perl-IO-Compress-Lzma:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 5
+            perl-local-lib:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 5
+            perl-Module-Build-Tiny:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 5
+            perl-Module-Install:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 5
+            perl-Params-Util:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 5
+            perl-Term-Table:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 5
+            perl-Data-OptList:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 6
+            perl-Module-Install-AuthorTests:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 6
+            perl-Package-Generator:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 6
+            perl-Readonly:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 6
+            perl-IPC-Run:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 7
+            perl-Sub-Exporter:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 7
+            perl-Data-Section:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 8
+            perl-Module-Signature:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 8
+            perl-Software-License:
+                rationale: A build dependency.
+                ref: f36
+                buildorder: 9

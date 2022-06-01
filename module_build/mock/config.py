@@ -1,7 +1,13 @@
-from module_build.constants import (KEY_MACROS_PREFIX, KEY_MODULE_ENABLE,
-                                    KEY_MODULE_INSTALL, KEY_SCM_BRANCH,
-                                    KEY_SCM_ENABLE, KEY_SCM_METHOD,
-                                    KEY_SCM_PACKAGE, KEY_SCM_PREFIX_ALL)
+from module_build.constants import (
+    KEY_MACROS_PREFIX,
+    KEY_MODULE_ENABLE,
+    KEY_MODULE_INSTALL,
+    KEY_SCM_BRANCH,
+    KEY_SCM_ENABLE,
+    KEY_SCM_METHOD,
+    KEY_SCM_PACKAGE,
+    KEY_SCM_PREFIX_ALL,
+)
 from module_build.log import logger
 
 
@@ -35,16 +41,18 @@ class MockConfig:
             package (str): Package name
             branch (str): Name of repository branch
         """
-        self.content.update({
-            KEY_SCM_ENABLE: "True",
-            KEY_SCM_METHOD: f"'{method}'",
-            KEY_SCM_PACKAGE: f"'{package}'",
-            KEY_SCM_BRANCH: f"'{branch}'",
-        })
+        self.content.update(
+            {
+                KEY_SCM_ENABLE: "True",
+                KEY_SCM_METHOD: f"'{method}'",
+                KEY_SCM_PACKAGE: f"'{package}'",
+                KEY_SCM_BRANCH: f"'{branch}'",
+            }
+        )
 
     def disable_mbs(self):
         """
-            Removes all MBS keys from mock config.
+        Removes all MBS keys from mock config.
         """
         for k in list(self.content.keys()):
             if k.startswith(KEY_SCM_PREFIX_ALL):
@@ -81,6 +89,6 @@ class MockConfig:
 
             f.write(f"include('{self.base_mock_cfg_path}')")
 
-        logger.info("Mock config for '{component_name}' component written to: {path}")
+        logger.info(f"Mock config for '{component_name}' component written to: {path}")
 
         return path
