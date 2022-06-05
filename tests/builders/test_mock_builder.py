@@ -5,6 +5,7 @@ from unittest.mock import patch
 import pytest
 from module_build.builders.mock_builder import MockBuilder, MockBuildPool
 from module_build.metadata import load_modulemd_file_from_path
+from module_build.mock.info import MockBuildInfoSRPM
 from module_build.stream import ModuleStream
 from tests import (assert_modular_dependencies, fake_buildroot_run,
                    fake_call_createrepo_c_on_dir, fake_get_artifacts,
@@ -465,6 +466,34 @@ class TestMockBuilder:
         err_msg = e.value.args[0]
         assert "Missing SRPM for" in err_msg
         assert "flatpak" in err_msg
+
+    @pytest.mark.parametrize("create_fake_srpm", [({"name": "nginx"}, {"name": "rustc"}, {"name": "php"}), ], indirect=True)
+    def test_srpm_mapping_with_invalid_files(self, tmpdir, create_fake_srpm, workers):
+        """
+        Test SRPM mapping with invalid SRPM files.
+        """
+
+        # Add garbage files to SRPM directory
+        garbage_file_names = ("struck.src.rpm", "nginx-1.33.src.rpm", "not_a_file", "magic.rpm")
+        for idx, f in enumerate(garbage_file_names, start=1):
+            with open(Path(create_fake_srpm) / f, "wb") as fd:
+                fd.write(os.urandom(1024 * 10 * idx))
+
+        # Validate created Fake SRPMs
+        fake_srpm_files = Path(create_fake_srpm).glob('*.rpm')
+        fake_srpm_files = [x for x in fake_srpm_files if x.is_file()]
+        assert 6 == len(fake_srpm_files)
+
+        cwd = tmpdir.mkdir("workdir").strpath
+        srpm_dir = str(Path(create_fake_srpm).resolve())
+        rootdir = None
+        mock_cfg_path = get_full_data_path("mock_cfg/fedora-35-x86_64.cfg")
+        external_repos = []
+
+        builder = MockBuilder(mock_cfg_path, cwd, external_repos, rootdir, srpm_dir, workers)
+
+        assert 3 == builder.mock_info.get_srpm_count()
+        assert isinstance(builder.mock_info._if_srpm_present("nginx")[0], MockBuildInfoSRPM)
 
 
 class TestMockBuilderAsync:

@@ -2,16 +2,14 @@ import copy
 import os
 import shutil
 import subprocess
-import tempfile
 from collections import OrderedDict
 from multiprocessing import Manager, Pool
 from pathlib import Path
 from sys import stdout
 from time import sleep
 
-import libarchive
 import mockbuild.config
-from module_build.constants import SPEC_EXTENSION, SRPM_EXTENSION
+from module_build.constants import SRPM_EXTENSION
 from module_build.log import logger
 from module_build.metadata import (generate_and_populate_output_mmd,
                                    generate_module_stream_version, mmd_to_str)
@@ -218,9 +216,8 @@ class MockBuilder:
     def _map_srpm_files(self, srpm_dir):
         """
             Function responsible for mapping srpm names to modules names.
-            It extracts .spec file from the rpm and looks for 'Name:'
-            line with an actual name. All results are stored in mock_info
-            variable inside class object.
+            It reads name directly from SRPM header. All results are stored
+            in mock_info variable inside class object.
 
         Args:
             srpm_dir (str, Path): Path to directory with SRPM files
@@ -232,33 +229,61 @@ class MockBuilder:
         for file in srpm_dir.glob(f"*.{SRPM_EXTENSION}"):
             logger.info(f"SRPM: Mapping component for '{file.name}' file")
 
-            with libarchive.file_reader(str(file.resolve())) as archive:
-                for entry in archive:
-                    # check for spec file
-                    if not all((entry.isfile, entry.pathname.endswith(SPEC_EXTENSION))):
+            with open(str(file.resolve()), "rb") as f:
+                # (s)RPM is 4 bytes aligned (at least) so we start reading here..
+                # We gonna keep reading until we find magic 'number' for SRPM Header
+                while (byte := f.read(4)):
+                    if byte == b"\x8e\xad\xe8\x01":
+                        break
+                # EOF, we found nothing. It's not critical so let's skip this file.
+                else:
+                    logger.warning(f"SRPM: Mapping name for: '{file.name}' failed because of unknown format?")
+                    continue
+
+                # Now let's read package name from RPMTAG_NAME.
+                # We cannot go by offset because size is not static..
+                # but the name tag is always first so it makes things easier.
+                # There is additional counter of 2500 bytes because some major
+                # changes might accour in scheme..(unrealistically) so to avoid
+                # reading incorrect bytes we add boundary.
+                byte_c = 0
+                # We cannot combine multiple conditions with Walrus Operator
+                while (byte := f.read(4)):
+                    if byte_c == 625:
+                        byte_c = -1
                         continue
 
-                    logger.info(f"SRPM: Located .spec file: '{entry.pathname}'")
+                    byte_c += 1
+                    # This is special sequence that should be unique before first tag
+                    if byte[:2] == b"\x43\x00":
+                        break
+                else:
+                    logger.warning(f"SRPM: Mapping name for: '{file.name}' failed during searching for name, EOF.")
+                    continue
 
-                    # read content of spec file and look for "Name:"
-                    with tempfile.NamedTemporaryFile() as tmp:
-                        for block in entry.get_blocks():
-                            tmp.write(block)
+                if byte_c == -1:
+                    logger.warning(f"SRPM: Mapping name for: '{file.name}' failed during searching for name.")
+                    continue
 
-                        # Reset fd
-                        tmp.flush()
-                        tmp.seek(0)
+                # We found the name, let's extract it. Last 2 bytes read
+                # previously contain beginning of our name.
+                # There are no packages with len() < than 2.
+                name = bytearray(byte[-2:])
 
-                        for line in tmp:
-                            # we are still in bytes
-                            line_str = line.decode("utf-8")
+                # We don't know length of the name so we read it byte by byte.
+                while (byte := f.read(1)):
+                    # That's end of the name.
+                    if byte == b"\x00":
+                        break
+                    name += bytearray(byte)
+                else:
+                    logger.warning(f"SRPM: Mapping name for: '{file.name}' failed during name reading.")
+                    continue
 
-                            if line_str.startswith("Name:"):
-                                component_name = line_str.split(":", 1)[1].strip()
-                                logger.info(f"SRPM: Found SRPM: '{file.name}' for component: '{component_name}'")
-                                self.mock_info.add_srpm(component_name, srpm_dir / file.name)
-                                break
-                    break
+                # Convert to string
+                name = name.decode()
+                self.mock_info.add_srpm(name, srpm_dir / file.name)
+                logger.info(f"SRPM: Found SRPM: '{file.name}' for component: '{name}'")
 
     def _precheck_rpm_mapping(self, context_to_build):
         """Checks if all components have a proper SRPM file.
