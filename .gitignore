@@ -139,7 +139,8 @@ cython_debug/
 .ionide
 
 # Support for Project snippet scope
-.vscode/*.code-snippets
+.vscode
+.code-snippets
 
 # Ignore code-workspaces
 *.code-workspace
