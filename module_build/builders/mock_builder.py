@@ -47,6 +47,10 @@ class MockBuilder:
             logger.info(msg)
             self.find_and_set_resume_point()
 
+        # Check if every component got SRPM if SRPM is enabled
+        if self.mock_info.srpms_enabled():
+            self._precheck_rpm_mapping(context_to_build)
+
         # when the metadata processing is done, we can ge to the building of the defined `contexts`
         for context_name, build_context in self.build_contexts.items():
             # check if there is a specified context to be build and if the current context is the
@@ -118,10 +122,8 @@ class MockBuilder:
                         continue
 
                     if self.mock_info.srpms_enabled():
-                        if srpm_path := self.mock_info.get_srpm_path(component["name"], component["ref"]):
-                            logger.info(f"Found SRPM for: {component['name']}")
-                        else:
-                            raise Exception(f"Missing SRPM for {component['name']}")
+                        srpm_path = self.mock_info.get_srpm_path(component["name"], component["ref"])
+                        logger.info(f"Found SRPM for: {component['name']}")
                     else:
                         srpm_path = ""
 
@@ -218,6 +220,25 @@ class MockBuilder:
                                 self.mock_info.add_srpm(component_name, srpm_dir / file.name)
                                 break
                     break
+
+    def _precheck_rpm_mapping(self, context_to_build):
+        """Checks if all components have a proper SRPM file.
+
+        :param context_to_build: name of the context
+        :type context_to_build: str
+        """
+        for context_name, build_context in self.build_contexts.items():
+            if context_to_build and context_to_build != context_name:
+                continue
+
+            sorted_batches = sorted(build_context["build_batches"])
+
+            for position in sorted_batches:
+                batch = build_context["build_batches"][position]
+
+                for component in batch["components"]:
+                    if not self.mock_info.get_srpm_path(component["name"], component["ref"]):
+                        raise Exception(f"Missing SRPM for {component['name']} in batch {position}")
 
     def final_report(self):
         pass
