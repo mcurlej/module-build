@@ -1,7 +1,18 @@
+import re
 from subprocess import DEVNULL, run
 from tempfile import NamedTemporaryFile
 
 import pytest
+
+
+# We use parametrize marker to utilize tests for as many scenarios as possible
+# Some scenarios need to be skipped due to async code or something else
+# To avoid duplication we do it here.
+def pytest_collection_modifyitems(config, items):
+    skip = pytest.mark.skip(reason="Skip async testcase scenario ...")
+    for item in items:
+        if re.match(r'.*test_build_(perl_bootstrap|specific_context)\[(?![1])\d\]', item.name):
+            item.add_marker(skip)
 
 
 def create_fake_spec(tmp_srpm_dir, name, version=None, release=None):

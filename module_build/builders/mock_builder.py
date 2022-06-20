@@ -1137,7 +1137,17 @@ class MockBuildPool:
         self.all_tasks = 0  # number of submitted taks to pool
         self.finished_tasks = 0  # number of finished tasks
         self.artifacts = self.manager.list()
-        self.failed = 0
+        self._failed = 0
+
+    # We need it to be as attr to be able to override in test
+    # cases scenarios.
+    @property
+    def failed(self):
+        return self._failed
+
+    @failed.setter
+    def failed(self, failed):
+        self._failed = failed
 
     def add_job(self, *args):
         """Adds job to the queue."""
@@ -1162,7 +1172,7 @@ class MockBuildPool:
         if result:
             self.finished_tasks += 1
         else:
-            self.failed += 1
+            self._failed += 1
         self.update_progress()
 
     def callback_error(self):
@@ -1171,7 +1181,7 @@ class MockBuildPool:
         but it might if exception is thrown in Buildroot. We add failure to avoid
         running another batch.
         """
-        self.failed += 1
+        self._failed += 1
         self.update_progress()
 
     def update_progress(self):
